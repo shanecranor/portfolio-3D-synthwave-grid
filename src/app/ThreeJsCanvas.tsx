@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   Bloom,
@@ -21,6 +21,8 @@ import {
   // Stats,
 } from "@react-three/drei";
 import { Background } from "@/components/3D/Background";
+import { FastVhsEffect } from "@/components/3D/effects/FastVhsEffect";
+import { Perf } from "r3f-perf";
 class GlowMaterial extends THREE.MeshBasicMaterial {
   constructor() {
     super();
@@ -40,6 +42,7 @@ function SetCameraPosition() {
 }
 
 export const ThreeJsCanvas = () => {
+  const [effectMode, setEffectMode] = useState<"classic" | "fast">("fast");
   const [windowDimensions, setWindowDimensions] = useState(
     typeof window !== "undefined"
       ? {
@@ -49,6 +52,65 @@ export const ThreeJsCanvas = () => {
       }
       : { width: 1920, height: 1080, ratio: 1920 / 1080 }
   );
+  const isClassicEffect = effectMode === "classic";
+  const toggleEffectMode = useCallback(() => {
+    setEffectMode((prev) => (prev === "classic" ? "fast" : "classic"));
+  }, []);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+      if (event.key.toLowerCase() === "c") {
+        toggleEffectMode();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleEffectMode]);
+  const postProcessing = useMemo(() => {
+    if (isClassicEffect) {
+      return (
+        <EffectComposer>
+          <Bloom
+            luminanceThreshold={2}
+            luminanceSmoothing={2}
+            intensity={0.6}
+            levels={4}
+            radius={0.4}
+            mipmapBlur={true}
+            opacity={0.2}
+          />
+          <Bloom
+            luminanceThreshold={0}
+            luminanceSmoothing={0}
+            intensity={0.3}
+            levels={9}
+            radius={0.6}
+            mipmapBlur={true}
+            opacity={1}
+          />
+          <Noise opacity={0.01} />
+
+          <Vignette
+            offset={0.4}
+            darkness={0.6}
+            eskil={false}
+            blendFunction={BlendFunction.DARKEN}
+          />
+
+          <BrightnessContrast brightness={0} contrast={0.1} />
+          <Scanline density={1} opacity={0.1} scrollSpeed={0.01} />
+        </EffectComposer>
+      );
+    }
+
+    return (
+      <EffectComposer multisampling={0} frameBufferType={THREE.HalfFloatType}>
+        <FastVhsEffect vignetteStrength={2} />
+      </EffectComposer>
+    );
+  }, [isClassicEffect]);
   useEffect(() => {
     const handleResize = () => {
       setWindowDimensions({
@@ -60,9 +122,13 @@ export const ThreeJsCanvas = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  return (<>
-    <Canvas dpr={[0.5, 1]} suppressHydrationWarning>
-
+  return (<div style={{ position: "relative", minHeight: "100vh" }}>
+    <Canvas
+      dpr={[0.5, 1]}
+      suppressHydrationWarning
+      style={{ width: "100%", height: "100%" }}
+    >
+      <Perf position="top-right" />
       {/* <Stats /> */}
       <SetCameraPosition />
       <Background windowDimensions={windowDimensions} />
@@ -74,44 +140,9 @@ export const ThreeJsCanvas = () => {
         saturation={1}
         speed={1}
       />
-      <ambientLight intensity={2.0} />
-      {/* <ambientLight intensity={1.0} /> */}
-      <EffectComposer>
-        <Bloom
-          luminanceThreshold={2}
-          luminanceSmoothing={2}
-          intensity={0.6}
-          levels={4}
-          radius={0.4}
-          mipmapBlur={true}
-          opacity={0.2}
-        />
-        <Bloom
-          luminanceThreshold={0}
-          luminanceSmoothing={0}
-          intensity={0.3}
-          levels={9}
-          radius={0.6}
-          mipmapBlur={true}
-          opacity={1}
-        />
-        <Noise opacity={0.01} />
-
-        <Vignette
-          offset={0.4} // vignette offset
-          darkness={0.6} // vignette darkness
-          eskil={false} // Eskil's vignette technique
-          blendFunction={BlendFunction.DARKEN} // blend mode
-        />
-
-        <BrightnessContrast brightness={0} contrast={0.1} />
-        <Scanline
-          // blendFunction={BlendFunction.NORMAL} // blend mode
-          density={1} // scanline density
-          opacity={0.1} // scanline opacity
-          scrollSpeed={0.01}
-        />
-      </EffectComposer>
+      {/* <ambientLight intensity={2.0} /> */}
+      <ambientLight intensity={1.0} />
+      {postProcessing}
       <Clouds limit={300} material={GlowMaterial}>
         <Cloud
           seed={129}
@@ -195,7 +226,28 @@ export const ThreeJsCanvas = () => {
         position={[0, -1.2, -80]}
       />
     </Canvas>
+    <button
+      type="button"
+      onClick={toggleEffectMode}
+      style={{
+        position: "absolute",
+        top: "1rem",
+        left: "1rem",
+        zIndex: 20,
+        padding: "0.5rem 1rem",
+        background: "rgba(17, 17, 17, 0.75)",
+        color: "#fff",
+        border: "1px solid rgba(255,255,255,0.25)",
+        borderRadius: "999px",
+        cursor: "pointer",
+        fontSize: "0.85rem",
+        backdropFilter: "blur(8px)",
+        pointerEvents: "auto",
+      }}
+    >
+      {isClassicEffect ? "Switch to fast VHS" : "Switch to classic bloom"}
+    </button>
     <Loader />
-  </>
+  </div>
   );
 };
