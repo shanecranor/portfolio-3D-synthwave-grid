@@ -10,8 +10,8 @@ export default function Navbar() {
   return (
     <nav className="navbar-container">
       {Object.entries(navbarLinks).map(([text, url]) => (
-        <Link legacyBehavior href={url} key={text}>
-          <a className="nav-link">{text}</a>
+        <Link href={url} key={text} className="nav-link">
+          {text}
         </Link>
       ))}
     </nav>
