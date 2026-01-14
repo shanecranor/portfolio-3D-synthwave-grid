@@ -9,6 +9,7 @@
 
   overflow: hidden;
   .img-container {
+    position: relative;
     overflow: hidden;
     container-type: inline-size;
     display: flex;
@@ -18,15 +19,12 @@
     border-bottom: 1px solid rgba(white, 0.2);
     // enable container sizing
     // border-radius: 8px;
+  }
 
-    img {
-      box-sizing: border-box;
-      //   border-radius: 8px;
-      width: 100%;
-      height: auto;
-      //   max-height: 365px;
-      object-fit: contain;
-    }
+  .project-image {
+    box-sizing: border-box;
+    object-fit: contain;
+    //   border-radius: 8px;
   }
   > .project-contents {
     padding: 30px;
@@ -53,8 +51,8 @@
           line-height: normal;
           font-weight: 400;
           //   color: white;
-          img {
-            width: 20px;
+          .project-link-icon {
+            width: 40px;
             height: auto;
           }
         }

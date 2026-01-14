@@ -34,15 +34,16 @@ export const PlaceholderImage = ({
 };
 
 // seeded random number generator for consistancy
-function splitmix32(a: number) {
+function splitmix32(seed: number) {
+  let state = seed | 0;
   return function () {
-    a |= 0;
-    a = (a + 0x9e3779b9) | 0;
-    var t = a ^ (a >>> 16);
+    state = (state + 0x9e3779b9) | 0;
+    let t = state ^ (state >>> 16);
     t = Math.imul(t, 0x21f0aaad);
-    t = t ^ (t >>> 15);
+    t ^= t >>> 15;
     t = Math.imul(t, 0x735a2d97);
-    return ((t = t ^ (t >>> 15)) >>> 0) / 4294967296;
+    t ^= t >>> 15;
+    return (t >>> 0) / 4294967296;
   };
 }
 function cyrb128(str: string) {

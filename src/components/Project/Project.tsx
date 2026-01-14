@@ -1,12 +1,9 @@
 "use client";
 import { Project as ProjectType } from "@/data/projects";
 import React, { useState } from "react";
-import SpinWheel from "@/public/assets/project-images/spin-wheel.png";
-import MinesRocks from "@/public/assets/project-images/mines-rocks.png";
+import Image from "next/image";
 import "./Project.scss";
-import { languagesMap } from "@/data/languages";
 import { PlaceholderImage } from "../PlaceholderImage/PlaceholderImage";
-import { getLanguageIcons } from "../ProjectTags/LanguageIcons";
 import { ProjectTags } from "../ProjectTags/ProjectTags";
 export default function Project({
   data,
@@ -18,12 +15,12 @@ export default function Project({
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const { title, summary, languages } = data;
   const handleMouseMove = (event: React.MouseEvent) => {
-    let target = event.target;
+    const target = event.target;
     // while (target.className != 'project-container'){
     // 	target = target.parentElement
     // }
     if (!(target instanceof HTMLElement)) return;
-    let rect = target.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     setCoords({
       x:
         (event.clientX - rect.left - target.offsetWidth / 2) /
@@ -42,7 +39,14 @@ export default function Project({
     <article className="project-container" onClick={onClick}>
       <div className="img-container">
         {data.img ? (
-          <img src={data.img} alt="" />
+          <Image
+            src={data.img}
+            alt={`${title} project preview`}
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="project-image"
+            style={{ objectFit: "contain" }}
+          />
         ) : (
           <PlaceholderImage seed={title} />
         )}
@@ -58,7 +62,17 @@ export default function Project({
           <div className="links">
             {data.links?.map((link) => (
               <a href={link.link} key={link.link}>
-                {link.img ? <img src={link.img} height="40px" width="40px" /> : link.description}{" "}
+                {link.img ? (
+                  <Image
+                    src={link.img}
+                    alt={`${title} ${link.description}`}
+                    width={40}
+                    height={40}
+                    className="project-link-icon"
+                  />
+                ) : (
+                  link.description
+                )}{" "}
               </a>
             )) || ""}
           </div>
