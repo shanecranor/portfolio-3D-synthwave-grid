@@ -1,3 +1,4 @@
+// Fullscreen triangle strip: positions are in clip space, UVs are derived.
 export const vertexShaderSource = `
   attribute vec2 a_position;
   varying vec2 v_uv;
@@ -8,7 +9,9 @@ export const vertexShaderSource = `
   }
 `;
 
-export const fragmentShaderSource = `
+// Synthwave grid fragment shader: fake neon glow via layered smoothstep falloff.
+const glsl = (x:TemplateStringsArray) => x
+export const fragmentShaderSource = glsl`
   precision highp float;
 
   varying vec2 v_uv;
@@ -19,6 +22,7 @@ export const fragmentShaderSource = `
   uniform float u_glowStrength;
   uniform float u_speed;
 
+  // Returns a bright core plus a wider glow halo around a line.
   float glowLine(float dist, float core, float glow) {
     float coreLine = smoothstep(core, 0.0, dist);
     float glowLine = smoothstep(glow, 0.0, dist);
@@ -32,6 +36,7 @@ export const fragmentShaderSource = `
 
     vec3 color = vec3(0.01, 0.0, 0.03);
 
+    // Sky: gradient with a soft sun disk.
     if (uv.y > horizon) {
       float skyT = (uv.y - horizon) / (1.0 - horizon);
       vec3 skyA = vec3(0.02, 0.0, 0.06);
@@ -46,6 +51,7 @@ export const fragmentShaderSource = `
       );
       color += vec3(0.8, 0.25, 0.9) * sun * 0.5;
     } else {
+      // Ground: project a grid to the horizon and animate it forward.
       float t = (horizon - uv.y) / horizon;
       float depth = 1.0 / (t * 6.0 + 0.22);
       vec2 ground = vec2((uv.x - 0.5) * aspect, 1.0) * depth;
