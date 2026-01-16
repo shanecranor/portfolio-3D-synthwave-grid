@@ -90,7 +90,7 @@ export const ThreeJsCanvas = () => {
           luminanceThreshold={0}
           luminanceSmoothing={0}
           intensity={0.3}
-          levels={9}
+          levels={5}
           radius={0.6}
           mipmapBlur={true}
           opacity={1}

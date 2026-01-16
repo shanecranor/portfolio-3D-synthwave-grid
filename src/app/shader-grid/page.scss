@@ -1,0 +1,90 @@
+.p-shader-grid {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 20%, #1f0b2c 0%, #05010a 55%);
+  font-family: var(--font-poppins), sans-serif;
+}
+
+.shader-grid-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.shader-grid-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 32px;
+  pointer-events: none;
+  color: #f2e9ff;
+  gap: 24px;
+}
+
+.shader-grid-copy {
+  max-width: 320px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+
+.shader-grid-link {
+  pointer-events: auto;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 240, 255, 0.4);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff2ff;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(255, 64, 170, 0.35), rgba(80, 200, 255, 0.2));
+  box-shadow: 0 10px 30px rgba(255, 65, 180, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shader-grid-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(255, 65, 180, 0.35);
+}
+
+.shader-grid-controls {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(10, 4, 20, 0.7);
+  border: 1px solid rgba(140, 80, 255, 0.35);
+  box-shadow: 0 20px 40px rgba(5, 0, 15, 0.45);
+  min-width: 220px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+.shader-grid-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shader-grid-controls input[type="range"] {
+  width: 100%;
+  accent-color: #ff4db8;
+}
+
+@media (max-width: 700px) {
+  .shader-grid-overlay {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
