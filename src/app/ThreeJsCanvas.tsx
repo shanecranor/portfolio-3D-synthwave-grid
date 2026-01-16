@@ -107,7 +107,19 @@ export const ThreeJsCanvas = () => {
 
     return (
       <EffectComposer multisampling={0} frameBufferType={THREE.HalfFloatType}>
-        <FastVhsEffect vignetteStrength={2} />
+        <FastVhsEffect
+          vignetteStrength={2}
+          bloomStrength={0}
+          bloomSoftStrength={0}
+        />
+        <Bloom
+          luminanceThreshold={0.15}
+          luminanceSmoothing={0.9}
+          intensity={0.65}
+          levels={2}
+          radius={0.6}
+          mipmapBlur={true}
+        />
       </EffectComposer>
     );
   }, [isClassicEffect]);
