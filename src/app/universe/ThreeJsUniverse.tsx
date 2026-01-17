@@ -11,13 +11,8 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import {
-  CameraControls,
-  Detailed,
-  Edges,
-  Loader,
-  Stars,
-} from "@react-three/drei";
+import { CameraControls, Detailed, Loader, Stars } from "@react-three/drei";
+import { NoisySphere } from "@/components/3D/NoisySphere";
 
 type ViewConfig = {
   label: string;
@@ -50,7 +45,16 @@ function CameraRig({ viewIndex }: { viewIndex: number }) {
 }
 
 export const ThreeJsUniverse = () => {
-  const edgeColor = useMemo(() => new THREE.Color(10, 0.9, 7), []);
+  const edgeBrightness = 0.4;
+  const edgeColor = useMemo(
+    () =>
+      new THREE.Color(
+        10 * edgeBrightness,
+        0.9 * edgeBrightness,
+        7 * edgeBrightness,
+      ),
+    [],
+  );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
 
   useEffect(() => {
@@ -75,20 +79,20 @@ export const ThreeJsUniverse = () => {
       >
         <CameraRig viewIndex={activeViewIndex} />
         <Detailed distances={[5, 40]}>
-          <mesh rotation={[0, 0, Math.PI / 2]}>
-            <sphereGeometry args={[5, 180, 90]} />
-            <meshBasicMaterial color={[0, 0, 0]} />
-            <Edges lineWidth={2} scale={1} color={edgeColor} threshold={0.9}>
-              <meshBasicMaterial />
-            </Edges>
-          </mesh>
-          <mesh rotation={[0, 0, Math.PI / 2]}>
-            <sphereGeometry args={[5, 32, 32]} />
-            <meshBasicMaterial color={[0, 0, 0]} />
-            <Edges lineWidth={2} scale={1} color={edgeColor} threshold={0.9}>
-              <meshBasicMaterial />
-            </Edges>
-          </mesh>
+          <NoisySphere
+            radius={5}
+            widthSegments={180}
+            heightSegments={90}
+            noiseAmount={0.1}
+            edgeColor={edgeColor}
+          />
+          <NoisySphere
+            radius={5}
+            widthSegments={32}
+            heightSegments={32}
+            noiseAmount={0.1}
+            edgeColor={edgeColor}
+          />
         </Detailed>
 
         <Stars
