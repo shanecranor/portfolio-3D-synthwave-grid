@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   Bloom,
@@ -26,13 +26,16 @@ function SetCameraPosition() {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.rotation.set(0.25, 0, 0);
+    camera.position.set(-6, 0, 4);
+    camera.rotation.set(0, 0, Math.PI / 2);
   }, [camera]);
 
   return null;
 }
-
+//react three fiber interpolate between cameras
 export const ThreeJsUniverse = () => {
+  const edgeColor = useMemo(() => new THREE.Color(10, 0.9, 7), []);
+
   return (
     <>
       <Canvas
@@ -40,11 +43,12 @@ export const ThreeJsUniverse = () => {
         gl={{ alpha: false }}
         suppressHydrationWarning
       >
-        <OrbitControls />
+        <SetCameraPosition />
+        {/* <OrbitControls /> */}
         <mesh>
-          <icosahedronGeometry args={[4, 1]} />
+          <sphereGeometry args={[5, 30, 30]} />
           <meshBasicMaterial color={[0, 0, 0]} />
-          <Edges lineWidth={2} scale={1} color={[10, 0.9, 7]}>
+          <Edges lineWidth={2} scale={1.02} color={edgeColor} threshold={0.9}>
             <meshBasicMaterial />
           </Edges>
         </mesh>
