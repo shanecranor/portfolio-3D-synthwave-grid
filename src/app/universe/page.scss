@@ -13,3 +13,18 @@
 
   // background: linear-gradient(90deg, rgb(61, 0, 61) 0%, rgb(0, 20, 48) 100%);
 }
+
+.universe-view-indicator {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  border-radius: 0.35rem;
+}

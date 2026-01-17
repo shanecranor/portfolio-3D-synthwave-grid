@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   Bloom,
@@ -11,8 +11,8 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import { SynthwaveGrid } from "@/components/3D/SynthwaveGrid";
 import {
+  CameraControls,
   Cloud,
   Clouds,
   Edges,
@@ -22,31 +22,102 @@ import {
   Stars,
   // Stats,
 } from "@react-three/drei";
-function SetCameraPosition() {
-  const { camera } = useThree();
 
-  useEffect(() => {
-    camera.position.set(-6, 0, 4);
-    camera.rotation.set(0, 0, Math.PI / 2);
-  }, [camera]);
-
-  return null;
-}
+type CameraView = {
+  label: string;
+  position: [number, number, number];
+  target: [number, number, number];
+};
 //react three fiber interpolate between cameras
 export const ThreeJsUniverse = () => {
   const edgeColor = useMemo(() => new THREE.Color(10, 0.9, 7), []);
+  const cameraControlRef = useRef<CameraControls | null>(null);
+  const views = useMemo<CameraView[]>(
+    () => [
+      {
+        label: "Default",
+        position: [0, 2, 7],
+        target: [0, 5, 0],
+      },
+      {
+        label: "Low Orbit",
+        position: [5, 2, 0],
+        target: [0, 1, 0],
+      },
+      {
+        label: "Top Down",
+        position: [0, 8, 0.01],
+        target: [0, 0, 0],
+      },
+    ],
+    [],
+  );
+  const [activeViewIndex, setActiveViewIndex] = useState(0);
+
+  const moveToView = useCallback(
+    (index: number) => {
+      const view = views[index];
+      if (!view) {
+        return;
+      }
+
+      const [positionX, positionY, positionZ] = view.position;
+      const [targetX, targetY, targetZ] = view.target;
+
+      cameraControlRef.current?.setLookAt(
+        positionX,
+        positionY,
+        positionZ,
+        targetX,
+        targetY,
+        targetZ,
+        true,
+      );
+    },
+    [cameraControlRef, views],
+  );
+
+  useEffect(() => {
+    moveToView(activeViewIndex);
+  }, [activeViewIndex, moveToView]);
+
+  useEffect(() => {
+    const totalViews = views.length;
+    if (totalViews === 0) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        setActiveViewIndex((current) => (current + 1) % totalViews);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [views]);
+
+  const activeView = views[activeViewIndex];
 
   return (
     <>
       <Canvas
+        camera={{ position: [0, 2, 7], fov: 50 }}
         dpr={[0.25 / 2, 0.5 / 2]}
         gl={{ alpha: false }}
         suppressHydrationWarning
       >
-        <SetCameraPosition />
+        <CameraControls ref={cameraControlRef} smoothTime={1.0} />
+        {/* <SetCameraPosition /> */}
         {/* <OrbitControls /> */}
-        <mesh>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
           <sphereGeometry args={[5, 30, 30]} />
+          {/* rotate the sphere */}
+
           <meshBasicMaterial color={[0, 0, 0]} />
           <Edges lineWidth={2} scale={1.02} color={edgeColor} threshold={0.9}>
             <meshBasicMaterial />
@@ -54,7 +125,7 @@ export const ThreeJsUniverse = () => {
         </mesh>
         {/* <Stats /> */}
         {/* <SetCameraPosition /> */}
-        {/* 
+
         <Stars
           radius={50}
           depth={500}
@@ -62,7 +133,7 @@ export const ThreeJsUniverse = () => {
           factor={5}
           saturation={1}
           speed={1}
-        /> */}
+        />
 
         <EffectComposer>
           <Bloom
@@ -91,6 +162,9 @@ export const ThreeJsUniverse = () => {
           />
         </EffectComposer>
       </Canvas>
+      {activeView && (
+        <div className="universe-view-indicator">{`${activeView.label}: ${activeView.position} -> ${activeView.target}`}</div>
+      )}
       <Loader />
     </>
   );
