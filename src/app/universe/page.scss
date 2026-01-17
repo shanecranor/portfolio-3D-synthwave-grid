@@ -1,0 +1,15 @@
+.three-js-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100dvw;
+  height: 100dvh;
+  canvas {
+    width: 100dvw;
+    height: 100dvw;
+    //set scaling to pixel
+    image-rendering: pixelated;
+  }
+
+  // background: linear-gradient(90deg, rgb(61, 0, 61) 0%, rgb(0, 20, 48) 100%);
+}
