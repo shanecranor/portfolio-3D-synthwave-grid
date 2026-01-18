@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CameraControls } from "@react-three/drei";
+import * as THREE from "three";
 
 export type ViewConfig = {
   label: string;
@@ -61,30 +62,32 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
         clearTimeout(transitionTimeoutRef.current);
       }
 
-      // When switching views, mark as transitioning and update orbit parameters
+      // When switching views, mark as transitioning
       isTransitioningRef.current = true;
       previousViewIndexRef.current = viewIndex;
-
-      orbitAngleRef.current = Math.atan2(view.position[2], view.position[1]);
-      cameraRadiusRef.current = Math.sqrt(
-        view.position[1] ** 2 + view.position[2] ** 2,
-      );
-      targetAngleRef.current = Math.atan2(view.target[2], view.target[1]);
-      targetRadiusRef.current = Math.sqrt(
-        view.target[1] ** 2 + view.target[2] ** 2,
-      );
 
       // Trigger smooth transition
       controls.setLookAt(
         ...view.position,
         ...view.target,
-        true, // enable transition
+        true, //enable transition        false, // enable transition
       );
+
       // Wait for the transition to complete before allowing orbiting
       transitionTimeoutRef.current = setTimeout(() => {
+        // After transition completes, sync orbit parameters with current camera position
+        // This ensures smooth start of orbiting from wherever the camera ended up
+        const camPos = controls.camera.position;
+        orbitAngleRef.current = Math.atan2(camPos.z, camPos.y);
+        cameraRadiusRef.current = Math.sqrt(camPos.y ** 2 + camPos.z ** 2);
+
+        const target = controls.getTarget(new THREE.Vector3());
+        targetAngleRef.current = Math.atan2(target.z, target.y);
+        targetRadiusRef.current = Math.sqrt(target.y ** 2 + target.z ** 2);
+
         isTransitioningRef.current = false;
         transitionTimeoutRef.current = null;
-      }, 3000);
+      }, 2500);
     }
 
     // Cleanup function to cancel timeout on unmount
@@ -106,7 +109,7 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     }
 
     // Update orbit angle (opposite direction to cancel sphere rotation on x-axis)
-    const rotationSpeed = -0.027;
+    const rotationSpeed = -0.01;
     orbitAngleRef.current -= delta * rotationSpeed;
     targetAngleRef.current -= delta * rotationSpeed;
 
@@ -132,5 +135,5 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     controls.camera.updateProjectionMatrix();
   });
 
-  return <CameraControls ref={(ref) => setControls(ref)} smoothTime={1.0} />;
+  return <CameraControls ref={(ref) => setControls(ref)} smoothTime={0.9} />;
 }
