@@ -12,17 +12,15 @@ import {
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
 import {
-  Center,
   CubeCamera,
   Detailed,
   Loader,
-  MeshTransmissionMaterial,
   Stars,
-  Text3D,
 } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { RX7Model } from "@/components/3D/RX7Model";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
+import { UniverseTitle } from "@/app/universe/UniverseTitle";
 
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 0.2;
@@ -55,29 +53,7 @@ export const ThreeJsUniverse = () => {
       <Canvas camera={{ fov: 100 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
-        <Center scale={[2, 2, 0.2]} position={[0, 5, 3]} rotation={[0.8, 0, 0]}>
-          <Text3D
-            font="AAReg.json"
-            bevelEnabled
-            bevelSize={0.01}
-            bevelThickness={0.9}
-            bevelOffset={0}
-          >
-            Shane Cranor
-            <MeshTransmissionMaterial
-              samples={4}
-              resolution={64}
-              color={[1.0, 1.0, 1.0]}
-              ior={1.5}
-              opacity={0.2}
-              metalness={0.1}
-              roughness={0.2}
-              transmission={1}
-              thickness={50}
-              emissive={[0.1, 0.1, 0.1]}
-            />
-          </Text3D>
-        </Center>
+        <UniverseTitle />
         <Detailed distances={[5, 15]}>
           <NoisySphere
             radius={5}
