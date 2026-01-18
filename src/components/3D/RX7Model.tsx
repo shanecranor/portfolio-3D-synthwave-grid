@@ -46,13 +46,13 @@ const PART_NAME_MAP: { [key: string]: keyof RX7Colors } = {
   "Mazda_Rx7_-_FC001_Luzes_Frente_0": "frontLights",
   "Mazda_Rx7_-_FC001_Luzes_Tr��s_Meio_0": "rearLights",
   "Mazda_Rx7_-_FC001_Luzes_Tr��s_Semi_Centro_0": "rearLightsSemi",
-  "PopUp_HeadLights001_Color_Car_2_0": "popupLights",
-  "PopUp_HeadLights001_Luzes_Frente_0": "popupLightGlass",
-  "Roda_Rim_Shinny001_0": "rims",
-  "Circle_Rim_Shinny002_0": "rims",
-  "Roda_Borracha001_0": "rubber",
-  "Roda_Borracha001_0_1": "rubber",
-  "Circle_Metal_Brakes_0": "brakes",
+  PopUp_HeadLights001_Color_Car_2_0: "popupLights",
+  PopUp_HeadLights001_Luzes_Frente_0: "popupLightGlass",
+  Roda_Rim_Shinny001_0: "rims",
+  Circle_Rim_Shinny002_0: "rims",
+  Roda_Borracha001_0: "rubber",
+  Roda_Borracha001_0_1: "rubber",
+  Circle_Metal_Brakes_0: "brakes",
 };
 
 export function RX7Model({
