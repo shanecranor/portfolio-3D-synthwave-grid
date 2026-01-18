@@ -1,23 +1,9 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-// Simple 3D Perlin-like noise function
-function smoothNoise(
-  x: number,
-  y: number,
-  z: number,
-  frequency: number,
-): number {
-  const X = Math.floor(x * frequency);
-  const Y = Math.floor(y * frequency);
-  const Z = Math.floor(z * frequency);
+import { simplexNoise3D } from "./simplex";
 
-  const hash = (X * 374761393 + Y * 668265263 + Z * 1274126177) & 0x7fffffff;
-  return (Math.sin(hash * 0.00001) + Math.cos(hash * 0.00002)) * 0.5;
-}
-
-// Multi-octave noise (fractal Brownian motion)
-function perlinNoise3D(
+function simplexNoise3DFractal(
   x: number,
   y: number,
   z: number,
@@ -29,7 +15,8 @@ function perlinNoise3D(
   let maxValue = 0;
 
   for (let i = 0; i < octaves; i++) {
-    value += smoothNoise(x, y, z, frequency) * amplitude;
+    value +=
+      simplexNoise3D(x * frequency, y * frequency, z * frequency) * amplitude;
     maxValue += amplitude;
     amplitude *= 0.5;
     frequency *= 2;
@@ -50,8 +37,9 @@ function addNoiseToSphere(
     vertex.fromBufferAttribute(positions, i);
     const distance = vertex.length();
 
-    // Simple Perlin-like noise for organic mountain-like terrain
-    let noise = perlinNoise3D(vertex.x, vertex.y, vertex.z, 4) * noiseAmount;
+    // Simplex noise for realistic mountain-like terrain
+    let noise =
+      simplexNoise3DFractal(vertex.x, vertex.y, vertex.z, 4) * noiseAmount;
 
     if (flatCenter) {
       // Reduce noise around y = 0 for flat center
