@@ -1,6 +1,43 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 
+// Simple 3D Perlin-like noise function
+function smoothNoise(
+  x: number,
+  y: number,
+  z: number,
+  frequency: number,
+): number {
+  const X = Math.floor(x * frequency);
+  const Y = Math.floor(y * frequency);
+  const Z = Math.floor(z * frequency);
+
+  const hash = (X * 374761393 + Y * 668265263 + Z * 1274126177) & 0x7fffffff;
+  return (Math.sin(hash * 0.00001) + Math.cos(hash * 0.00002)) * 0.5;
+}
+
+// Multi-octave noise (fractal Brownian motion)
+function perlinNoise3D(
+  x: number,
+  y: number,
+  z: number,
+  octaves: number = 4,
+): number {
+  let value = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let maxValue = 0;
+
+  for (let i = 0; i < octaves; i++) {
+    value += smoothNoise(x, y, z, frequency) * amplitude;
+    maxValue += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2;
+  }
+
+  return value / maxValue;
+}
+
 function addNoiseToSphere(
   geometry: THREE.SphereGeometry,
   noiseAmount: number = 0.1,
@@ -13,14 +50,13 @@ function addNoiseToSphere(
     vertex.fromBufferAttribute(positions, i);
     const distance = vertex.length();
 
-    // Add noise based on vertex position
-    let noise =
-      Math.sin(vertex.x * 3 + vertex.y * 2) *
-      Math.cos(vertex.y * 4 + vertex.z * 3) *
-      Math.sin(vertex.z * 2 + vertex.x * 5) *
-      noiseAmount;
+    // Simple Perlin-like noise for organic mountain-like terrain
+    let noise = perlinNoise3D(vertex.x, vertex.y, vertex.z, 4) * noiseAmount;
+
     if (flatCenter) {
-      noise *= -3 * Math.cos(vertex.y * 1.2) + 3;
+      // Reduce noise around y = 0 for flat center
+      noise *=
+        -1.5 * Math.cos(Math.min(Math.abs(vertex.y) * 1.5, Math.PI)) + 1.7;
     }
 
     vertex.normalize().multiplyScalar(distance + noise);
@@ -88,6 +124,7 @@ type NoisySphereProps = {
   edgeColor?: THREE.Color;
   edgeThreshold?: number;
   edgeLineWidth?: number;
+  flatCenter?: boolean;
 };
 
 export function NoisySphere({
@@ -99,13 +136,14 @@ export function NoisySphere({
   edgeColor,
   edgeThreshold = 0.9,
   edgeLineWidth = 1,
+  flatCenter = true,
 }: NoisySphereProps) {
   const { sphereGeometry, wireframeGeometry } = useMemo(() => {
     const geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
-    addNoiseToSphere(geo, noiseAmount);
+    addNoiseToSphere(geo, noiseAmount, flatCenter);
     const wireframe = createSphereWireframe(geo, widthSegments, heightSegments);
     return { sphereGeometry: geo, wireframeGeometry: wireframe };
-  }, [radius, widthSegments, heightSegments, noiseAmount]);
+  }, [radius, widthSegments, heightSegments, noiseAmount, flatCenter]);
 
   return (
     <group rotation={rotation}>
