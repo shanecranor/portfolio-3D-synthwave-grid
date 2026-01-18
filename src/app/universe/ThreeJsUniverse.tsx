@@ -165,11 +165,10 @@ export const ThreeJsUniverse = () => {
               body: 0x0000aa,
               secondaryBody: 0x000088,
               popupLights: 0x000088,
-
-              frontLights: 0xffffff,
-              rearLights: 0xff0000,
+              frontLights: new THREE.Color(1, 1, 1),
+              rearLights: new THREE.Color(5, 0.1, 0.0),
+              rearLightsSemi: new THREE.Color(0.5, 0.3, 0),
               rims: 0xcccccc,
-              brakes: 0xff5500,
             }}
           />
         </Suspense>
