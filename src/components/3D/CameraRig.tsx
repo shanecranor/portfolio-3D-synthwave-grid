@@ -21,15 +21,21 @@ type CameraRigProps = {
 export function CameraRig({ viewIndex }: CameraRigProps) {
   const [controls, setControls] = useState<CameraControls | null>(null);
   const initializedRef = useRef(false);
+  const isTransitioningRef = useRef(false);
   const orbitAngleRef = useRef(0);
   const cameraRadiusRef = useRef(0);
   const targetRadiusRef = useRef(0);
   const targetAngleRef = useRef(0);
+  const previousViewIndexRef = useRef(viewIndex);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const view = VIEWS[viewIndex];
+  const isDefaultView = viewIndex === 0;
 
   useEffect(() => {
     if (!controls || !view) return;
+
+    const viewChanged = previousViewIndexRef.current !== viewIndex;
 
     // Initialize orbit angles and radii based on starting positions
     if (!initializedRef.current) {
@@ -42,8 +48,23 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
         view.target[1] ** 2 + view.target[2] ** 2,
       );
       initializedRef.current = true;
-    } else {
-      // When switching views, smoothly transition
+
+      // Set initial position without transition
+      controls.setLookAt(
+        ...view.position,
+        ...view.target,
+        true, // skip transition
+      );
+    } else if (viewChanged) {
+      // Cancel any existing transition timeout
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+
+      // When switching views, mark as transitioning and update orbit parameters
+      isTransitioningRef.current = true;
+      previousViewIndexRef.current = viewIndex;
+
       orbitAngleRef.current = Math.atan2(view.position[2], view.position[1]);
       cameraRadiusRef.current = Math.sqrt(
         view.position[1] ** 2 + view.position[2] ** 2,
@@ -52,17 +73,37 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
       targetRadiusRef.current = Math.sqrt(
         view.target[1] ** 2 + view.target[2] ** 2,
       );
+
+      // Trigger smooth transition
+      controls.setLookAt(
+        ...view.position,
+        ...view.target,
+        true, // enable transition
+      );
+      // Wait for the transition to complete before allowing orbiting
+      transitionTimeoutRef.current = setTimeout(() => {
+        isTransitioningRef.current = false;
+        transitionTimeoutRef.current = null;
+      }, 3000);
     }
 
-    controls.setLookAt(
-      ...view.position,
-      ...view.target,
-      initializedRef.current, // disable transition for the first load
-    );
-  }, [controls, view]);
+    // Cleanup function to cancel timeout on unmount
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, [controls, view, viewIndex]);
 
   useFrame((state, delta) => {
     if (!controls) return;
+
+    // Only orbit when in default view and not transitioning
+    if (!isDefaultView || isTransitioningRef.current) {
+      // Let CameraControls handle the transition
+      controls.update(delta);
+      return;
+    }
 
     // Update orbit angle (opposite direction to cancel sphere rotation on x-axis)
     const rotationSpeed = -0.027;
@@ -84,7 +125,7 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     const upY = Math.sin(orbitAngleRef.current);
     const upZ = -Math.cos(orbitAngleRef.current);
 
-    // Update camera position, target, and up vector
+    // Update camera position, target, and up vector manually for orbiting
     controls.camera.position.set(view.position[0], newCamY, newCamZ);
     controls.camera.up.set(0, upY, upZ);
     controls.camera.lookAt(view.target[0], newTargetY, newTargetZ);
