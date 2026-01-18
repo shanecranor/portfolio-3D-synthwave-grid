@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mazda RX-7 FC -  Low Poly
+* source:	https://sketchfab.com/3d-models/mazda-rx-7-fc-low-poly-9f08868d2e7c47e49769130fae652aff
+* author:	JiggleSticks (https://sketchfab.com/JiggleSticks)
+
+Model License:
+* license type:	CC-BY-ND-4.0 (http://creativecommons.org/licenses/by-nd/4.0/)
+* requirements:	Author must be credited. Modified versions can not be distributed. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mazda RX-7 FC -  Low Poly" (https://sketchfab.com/3d-models/mazda-rx-7-fc-low-poly-9f08868d2e7c47e49769130fae652aff) by JiggleSticks (https://sketchfab.com/JiggleSticks) licensed under CC-BY-ND-4.0 (http://creativecommons.org/licenses/by-nd/4.0/)

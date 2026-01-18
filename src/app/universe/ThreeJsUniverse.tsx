@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Bloom,
@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
 import { CameraControls, Detailed, Loader, Stars } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
+import { RX7Model } from "@/components/3D/RX7Model";
 
 type ViewConfig = {
   label: string;
@@ -93,10 +94,10 @@ function CameraRig({ viewIndex }: { viewIndex: number }) {
     const upZ = -Math.cos(orbitAngleRef.current);
 
     // Update camera position, target, and up vector
-    controls.camera.position.set(view.position[0], newCamY, newCamZ);
-    controls.camera.up.set(0, upY, upZ);
-    controls.camera.lookAt(view.target[0], newTargetY, newTargetZ);
-    controls.camera.updateProjectionMatrix();
+    // controls.camera.position.set(view.position[0], newCamY, newCamZ);
+    // controls.camera.up.set(0, upY, upZ);
+    // controls.camera.lookAt(view.target[0], newTargetY, newTargetZ);
+    // controls.camera.updateProjectionMatrix();
   });
 
   return <CameraControls ref={(ref) => setControls(ref)} smoothTime={1.0} />;
@@ -131,8 +132,9 @@ export const ThreeJsUniverse = () => {
   return (
     <>
       <Canvas camera={{ fov: 100 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
+        {/* <color attach="background" args={["white"]} /> */}
         <CameraRig viewIndex={activeViewIndex} />
-        <Detailed distances={[5, 15]}>
+        {/* <Detailed distances={[5, 15]}>
           <NoisySphere
             radius={5}
             widthSegments={350}
@@ -147,8 +149,22 @@ export const ThreeJsUniverse = () => {
             noiseAmount={0.3}
             edgeColor={edgeColor}
           />
-        </Detailed>
-
+        </Detailed> */}
+        <Suspense fallback={null}>
+          <RX7Model
+            position={[0, 4, 0]}
+            scale={1}
+            colors={{
+              body: 0xff00ff,
+              secondaryBody: 0xff00aa,
+              glass: 0x00ffff,
+              frontLights: 0xffffff,
+              rearLights: 0xff0000,
+              rims: 0xcccccc,
+              brakes: 0xff5500,
+            }}
+          />
+        </Suspense>
         <Stars
           radius={50}
           depth={500}
