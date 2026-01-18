@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-
 // Simple 3D Perlin-like noise function
 function smoothNoise(
   x: number,
@@ -138,6 +138,8 @@ export function NoisySphere({
   edgeLineWidth = 1,
   flatCenter = true,
 }: NoisySphereProps) {
+  const groupRef = useRef<THREE.Group>(null);
+
   const { sphereGeometry, wireframeGeometry } = useMemo(() => {
     const geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
     addNoiseToSphere(geo, noiseAmount, flatCenter);
@@ -145,14 +147,20 @@ export function NoisySphere({
     return { sphereGeometry: geo, wireframeGeometry: wireframe };
   }, [radius, widthSegments, heightSegments, noiseAmount, flatCenter]);
 
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.x = clock.elapsedTime * 0.03;
+    }
+  });
+
   return (
-    <group rotation={rotation}>
+    <group ref={groupRef} rotation={rotation}>
       <mesh geometry={sphereGeometry} scale={[0.99, 0.99, 0.99]}>
         <meshBasicMaterial color={[0, 0, 0]} />
       </mesh>
       {edgeColor && (
         <lineSegments geometry={wireframeGeometry}>
-          <lineBasicMaterial color={edgeColor} linewidth={edgeLineWidth} />
+          <lineBasicMaterial color={edgeColor} />
         </lineSegments>
       )}
     </group>

@@ -21,7 +21,7 @@ type ViewConfig = {
 };
 
 const VIEWS: ViewConfig[] = [
-  { label: "Default", position: [0, 2, 7], target: [0, 5.6, 0] },
+  { label: "Default", position: [0, 2, 4.8], target: [0, 9, 0] },
   { label: "Low Orbit", position: [5, 2, 0], target: [0, 1, 0] },
   { label: "Top Down", position: [0, 8, 0.01], target: [0, 0, 0] },
 ];
@@ -45,7 +45,7 @@ function CameraRig({ viewIndex }: { viewIndex: number }) {
 }
 
 export const ThreeJsUniverse = () => {
-  const edgeBrightness = 0.4;
+  const edgeBrightness = 0.2;
   const edgeColor = useMemo(
     () =>
       new THREE.Color(
@@ -73,16 +73,16 @@ export const ThreeJsUniverse = () => {
   return (
     <>
       <Canvas
-        camera={{ position: [0, 2, 7], fov: 20 }}
-        dpr={[1 / 4, 2 / 4]}
+        camera={{ position: [0, 2, 4.8], fov: 100 }}
+        dpr={[1 / 2, 1]}
         gl={{ alpha: false }}
       >
         <CameraRig viewIndex={activeViewIndex} />
         <Detailed distances={[5, 40]}>
           <NoisySphere
             radius={5}
-            widthSegments={180}
-            heightSegments={90}
+            widthSegments={350}
+            heightSegments={250}
             noiseAmount={0.3}
             edgeColor={edgeColor}
           />
