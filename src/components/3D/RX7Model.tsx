@@ -85,6 +85,7 @@ export function RX7Model({
           wireframe: wireframe,
           transparent: colorKey === "glass",
           opacity: colorKey === "glass" ? 0.3 : 1.0,
+          side: THREE.DoubleSide, // Render both sides to prevent culling issues
         });
 
         child.material = newMaterial;
