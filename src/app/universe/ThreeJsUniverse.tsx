@@ -83,14 +83,14 @@ export const ThreeJsUniverse = () => {
             radius={5}
             widthSegments={180}
             heightSegments={90}
-            noiseAmount={0.1}
+            noiseAmount={0.3}
             edgeColor={edgeColor}
           />
           <NoisySphere
             radius={5}
             widthSegments={32}
             heightSegments={32}
-            noiseAmount={0.1}
+            noiseAmount={0.3}
             edgeColor={edgeColor}
           />
         </Detailed>

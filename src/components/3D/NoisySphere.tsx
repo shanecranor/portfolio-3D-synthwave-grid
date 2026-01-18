@@ -4,6 +4,7 @@ import * as THREE from "three";
 function addNoiseToSphere(
   geometry: THREE.SphereGeometry,
   noiseAmount: number = 0.1,
+  flatCenter: boolean = true,
 ) {
   const positions = geometry.attributes.position;
   const vertex = new THREE.Vector3();
@@ -13,11 +14,14 @@ function addNoiseToSphere(
     const distance = vertex.length();
 
     // Add noise based on vertex position
-    const noise =
+    let noise =
       Math.sin(vertex.x * 3 + vertex.y * 2) *
       Math.cos(vertex.y * 4 + vertex.z * 3) *
       Math.sin(vertex.z * 2 + vertex.x * 5) *
       noiseAmount;
+    if (flatCenter) {
+      noise *= -3 * Math.cos(vertex.y * 1.2) + 3;
+    }
 
     vertex.normalize().multiplyScalar(distance + noise);
     positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
