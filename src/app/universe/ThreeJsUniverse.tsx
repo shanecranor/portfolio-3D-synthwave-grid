@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   Bloom,
@@ -28,17 +28,20 @@ const VIEWS: ViewConfig[] = [
 
 function CameraRig({ viewIndex }: { viewIndex: number }) {
   const [controls, setControls] = useState<CameraControls | null>(null);
+  const initializedRef = useRef(false);
 
   const view = VIEWS[viewIndex];
 
   useEffect(() => {
     if (!controls || !view) return;
-
     controls.setLookAt(
       ...view.position,
       ...view.target,
-      true, // enable transition
+      initializedRef.current, // disable transition for the first load
     );
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+    }
   }, [controls, view]);
 
   return <CameraControls ref={(ref) => setControls(ref)} smoothTime={1.0} />;
