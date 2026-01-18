@@ -13,7 +13,8 @@ type RX7Colors = {
   popupLights?: THREE.ColorRepresentation; // Popup headlight body
   popupLightGlass?: THREE.ColorRepresentation; // Popup headlight glass
   rims?: THREE.ColorRepresentation; // Wheel rims
-  brakes?: THREE.ColorRepresentation; // Brake discs
+  brakeRotor?: THREE.ColorRepresentation; // Brake discs
+  brakeDisks?: THREE.ColorRepresentation; // Brake discs
 };
 
 type RX7ModelProps = {
@@ -28,7 +29,7 @@ type RX7ModelProps = {
 const DEFAULT_COLORS: RX7Colors = {
   body: 0xff00ff,
   secondaryBody: 0xff00aa,
-  glass: 0x00ffff,
+  glass: 0x001111,
   rubber: 0x111111,
   frontLights: 0xffffff,
   rearLights: 0xff0000,
@@ -36,7 +37,8 @@ const DEFAULT_COLORS: RX7Colors = {
   popupLights: 0xff00ff,
   popupLightGlass: 0xffffff,
   rims: 0xaaaaaa,
-  brakes: 0xff5500,
+  brakeRotor: 0xff5500,
+  brakeDisks: 0x444444,
 };
 
 const PART_NAME_MAP: { [key: string]: keyof RX7Colors } = {
@@ -50,10 +52,10 @@ const PART_NAME_MAP: { [key: string]: keyof RX7Colors } = {
   PopUp_HeadLights001_Color_Car_2_0: "popupLights",
   PopUp_HeadLights001_Luzes_Frente_0: "popupLightGlass",
   Roda_Rim_Shinny001_0: "rims",
-  Circle_Rim_Shinny002_0: "rims",
+  Circle_Rim_Shinny002_0: "brakeDisks",
   Roda_Borracha001_0: "rubber",
   Roda_Borracha001_0_1: "rubber",
-  Circle_Metal_Brakes_0: "brakes",
+  Circle_Metal_Brakes_0: "brakeRotor",
 };
 
 export function RX7Model({
@@ -102,7 +104,7 @@ export function RX7Model({
             color: partColor,
             wireframe: wireframe,
             transparent: colorKey === "glass",
-            opacity: colorKey === "glass" ? 0.3 : 1.0,
+            opacity: colorKey === "glass" ? 0.95 : 1.0,
             side: THREE.DoubleSide, // Render both sides to prevent culling issues
           });
         }

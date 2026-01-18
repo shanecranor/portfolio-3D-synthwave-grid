@@ -165,7 +165,7 @@ export const ThreeJsUniverse = () => {
               body: 0x0000aa,
               secondaryBody: 0x000088,
               popupLights: 0x000088,
-              glass: 0x00ffff,
+
               frontLights: 0xffffff,
               rearLights: 0xff0000,
               rims: 0xcccccc,
