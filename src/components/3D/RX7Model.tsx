@@ -22,6 +22,7 @@ type RX7ModelProps = {
   scale?: number | [number, number, number];
   colors?: RX7Colors;
   wireframe?: boolean;
+  envMap?: THREE.Texture;
 };
 
 const DEFAULT_COLORS: RX7Colors = {
@@ -61,6 +62,7 @@ export function RX7Model({
   scale = 1,
   colors = {},
   wireframe = false,
+  envMap,
 }: RX7ModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { scene } = useGLTF("/assets/rx7-fc/rx7-2.gltf");
@@ -79,19 +81,36 @@ export function RX7Model({
         const colorKey = PART_NAME_MAP[child.name];
         const partColor = colorKey ? finalColors[colorKey] : 0xff00ff;
 
-        // Create fully emissive material
-        const newMaterial = new THREE.MeshBasicMaterial({
-          color: partColor,
-          wireframe: wireframe,
-          transparent: colorKey === "glass",
-          opacity: colorKey === "glass" ? 0.3 : 1.0,
-          side: THREE.DoubleSide, // Render both sides to prevent culling issues
-        });
+        // Create reflective emissive material
+        let newMaterial;
+        if (envMap) {
+          newMaterial = new THREE.MeshStandardMaterial({
+            color: partColor,
+            emissive: partColor,
+            emissiveIntensity: 0.8,
+            metalness: 1,
+            roughness: 0.2,
+            wireframe: wireframe,
+            transparent: colorKey === "glass",
+            opacity: colorKey === "glass" ? 0.3 : 1.0,
+            side: THREE.DoubleSide, // Render both sides to prevent culling issues
+            envMap: envMap,
+            envMapIntensity: 1.0,
+          });
+        } else {
+          newMaterial = new THREE.MeshBasicMaterial({
+            color: partColor,
+            wireframe: wireframe,
+            transparent: colorKey === "glass",
+            opacity: colorKey === "glass" ? 0.3 : 1.0,
+            side: THREE.DoubleSide, // Render both sides to prevent culling issues
+          });
+        }
 
         child.material = newMaterial;
       }
     });
-  }, [clonedScene, finalColors, wireframe]);
+  }, [clonedScene, finalColors, wireframe, envMap]);
 
   return (
     <group ref={groupRef} position={position} rotation={rotation} scale={scale}>

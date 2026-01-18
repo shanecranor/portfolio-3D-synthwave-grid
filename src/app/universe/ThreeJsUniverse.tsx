@@ -11,7 +11,13 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import { CameraControls, Detailed, Loader, Stars } from "@react-three/drei";
+import {
+  CameraControls,
+  CubeCamera,
+  Detailed,
+  Loader,
+  Stars,
+} from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { RX7Model } from "@/components/3D/RX7Model";
 
@@ -132,9 +138,9 @@ export const ThreeJsUniverse = () => {
   return (
     <>
       <Canvas camera={{ fov: 100 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
-        {/* <color attach="background" args={["white"]} /> */}
+        <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
-        {/* <Detailed distances={[5, 15]}>
+        <Detailed distances={[5, 15]}>
           <NoisySphere
             radius={5}
             widthSegments={350}
@@ -149,14 +155,16 @@ export const ThreeJsUniverse = () => {
             noiseAmount={0.3}
             edgeColor={edgeColor}
           />
-        </Detailed> */}
+        </Detailed>
         <Suspense fallback={null}>
           <RX7Model
-            position={[0, 4, 0]}
-            scale={1}
+            position={[0, 4.2, 3]}
+            rotation={[0, Math.PI / -2, -0.8]}
+            scale={0.3}
             colors={{
-              body: 0xff00ff,
-              secondaryBody: 0xff00aa,
+              body: 0x0000aa,
+              secondaryBody: 0x000088,
+              popupLights: 0x000088,
               glass: 0x00ffff,
               frontLights: 0xffffff,
               rearLights: 0xff0000,
