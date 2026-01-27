@@ -53,7 +53,7 @@ export const ThreeJsUniverse = () => {
       <Canvas camera={{ fov: 100 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
-        <UniverseTitle />
+        <UniverseTitle viewIndex={activeViewIndex} />
         <Detailed distances={[5, 15]}>
           <NoisySphere
             radius={5}

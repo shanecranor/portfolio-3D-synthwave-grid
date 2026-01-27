@@ -1,15 +1,17 @@
 "use client";
 
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
-import { useFrame, extend } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, extend, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
+import type { Line2, LineMaterial } from "three-stdlib";
 import {
   MeshTransmissionMaterial,
   Line,
   Center,
   useFont,
 } from "@react-three/drei";
+import { VIEWS } from "@/components/3D/CameraRig";
 
 extend({ TextGeometry });
 declare module "@react-three/fiber" {
@@ -19,8 +21,15 @@ declare module "@react-three/fiber" {
   }
 }
 
-const AnimatedDashLine = ({ shape, color, thickness, speed = 1 }) => {
-  const lineRef = useRef<any>(null);
+const AnimatedDashLine = ({
+  shape,
+  color,
+  thickness,
+  speed = 1,
+  dashSize = 0.25,
+  gapSize = 0.1,
+}) => {
+  const lineRef = useRef<Line2 | null>(null);
   const { linePoints, totalLineLength } = useMemo(() => {
     // add z coord to 2D points to make them 3D
     const _points = shape.getPoints().map((p) => [p.x, p.y, 0]);
@@ -36,10 +45,11 @@ const AnimatedDashLine = ({ shape, color, thickness, speed = 1 }) => {
   }, [shape]);
 
   useFrame((state, delta) => {
-    if (lineRef.current?.material) {
-      // move the dash offset continuously to animate
-      lineRef.current.material.dashOffset -= delta * speed * 10;
-    }
+    const material = lineRef.current?.material as LineMaterial | undefined;
+    if (!material) return;
+
+    // move the dash offset continuously to animate
+    material.dashOffset -= delta * speed * 10;
   });
 
   return (
@@ -50,13 +60,32 @@ const AnimatedDashLine = ({ shape, color, thickness, speed = 1 }) => {
       lineWidth={thickness}
       dashed
       dashScale={1}
-      dashSize={totalLineLength * 0.5}
-      gapSize={totalLineLength * 1.5}
+      dashSize={totalLineLength * dashSize}
+      gapSize={totalLineLength * gapSize}
     />
   );
 };
 
-export const UniverseTitle = () => {
+type UniverseTitleProps = {
+  viewIndex: number;
+  angleOffset?: number;
+  radialOffset?: number;
+  xOffset?: number;
+};
+
+export const UniverseTitle = ({
+  viewIndex,
+  angleOffset = 0,
+  radialOffset = 0,
+  xOffset = 0,
+}: UniverseTitleProps) => {
+  const { camera } = useThree();
+  const rootRef = useRef<THREE.Group>(null);
+  const orbitAngleRef = useRef(0);
+  const orbitRadiusRef = useRef(0);
+  const orbitXRef = useRef(0);
+  const defaultView = VIEWS[0];
+
   const font = useFont("/AAReg.json");
 
   const text = "Shane Cranor";
@@ -80,9 +109,46 @@ export const UniverseTitle = () => {
     return font.generateShapes(text, config.size);
   }, [font, text, config.size]);
 
+  const isDefaultView = viewIndex === 0;
+
+  useEffect(() => {
+    if (!isDefaultView || !defaultView) return;
+
+    // Sync orbit parameters with the current camera state so the title
+    // sits on the same orbital path when returning to default view.
+    const camPos = camera.position;
+    orbitAngleRef.current = Math.atan2(camPos.z, camPos.y);
+    orbitRadiusRef.current = Math.sqrt(camPos.y ** 2 + camPos.z ** 2);
+    orbitXRef.current = camPos.x;
+  }, [camera, defaultView, isDefaultView]);
+
+  useFrame((_, delta) => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    root.visible = isDefaultView;
+    if (!isDefaultView || !defaultView) return;
+
+    // Match the orbit math in CameraRig so the title rides the same path.
+    const rotationSpeed = -0.01;
+    orbitAngleRef.current -= delta * rotationSpeed;
+
+    const orbitAngle = orbitAngleRef.current + angleOffset;
+    const orbitRadius = orbitRadiusRef.current + radialOffset;
+
+    const newY = Math.cos(orbitAngle) * orbitRadius;
+    const newZ = Math.sin(orbitAngle) * orbitRadius;
+
+    root.position.set(orbitXRef.current + xOffset, newY, newZ);
+
+    // Keep the title aligned with the orbit path (around the X axis),
+    // without matching the camera orientation.
+    root.rotation.set(orbitAngle + 0.4, 0, 0);
+  });
+
   return (
-    <Center position={[0, 5, 3]} rotation={[0.8, 0, 0]}>
-      <group>
+    <group ref={rootRef}>
+      <Center>
         <mesh>
           <textGeometry args={[text, config]} />
           <MeshTransmissionMaterial
@@ -109,7 +175,7 @@ export const UniverseTitle = () => {
                 shape={shape}
                 color="cyan"
                 thickness={3}
-                speed={0.5}
+                speed={0.1}
               />
               {shape.holes.map((hole, holeIndex) => (
                 <AnimatedDashLine
@@ -117,13 +183,38 @@ export const UniverseTitle = () => {
                   shape={hole}
                   color="cyan"
                   thickness={3}
-                  speed={0.5}
+                  speed={0.1}
                 />
               ))}
             </group>
           ))}
         </group>
-      </group>
-    </Center>
+        <group position={[0, 0, -1 * (config.bevelThickness + 0.01)]}>
+          {shapes.map((shape, shapeIndex) => (
+            <group key={shapeIndex}>
+              <AnimatedDashLine
+                shape={shape}
+                color={[0, 1, 1]}
+                thickness={1}
+                speed={0.05}
+                dashSize={0.3}
+                gapSize={0}
+              />
+              {shape.holes.map((hole, holeIndex) => (
+                <AnimatedDashLine
+                  key={holeIndex}
+                  shape={hole}
+                  color={[0, 1, 1]}
+                  thickness={3}
+                  speed={0.5}
+                  dashSize={1}
+                  gapSize={0}
+                />
+              ))}
+            </group>
+          ))}
+        </group>
+      </Center>
+    </group>
   );
 };
