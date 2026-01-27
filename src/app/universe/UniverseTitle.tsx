@@ -1,7 +1,7 @@
 "use client";
 
 import * as THREE from "three";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame, extend, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 import type { Line2, LineMaterial } from "three-stdlib";
@@ -11,7 +11,6 @@ import {
   Center,
   useFont,
 } from "@react-three/drei";
-import { VIEWS } from "@/components/3D/CameraRig";
 
 extend({ TextGeometry });
 declare module "@react-three/fiber" {
@@ -75,16 +74,12 @@ type UniverseTitleProps = {
 
 export const UniverseTitle = ({
   viewIndex,
-  angleOffset = 0,
-  radialOffset = 0,
-  xOffset = 0,
+  angleOffset = -0.8,
+  radialOffset = 0.8,
+  xOffset = -0.4,
 }: UniverseTitleProps) => {
   const { camera } = useThree();
   const rootRef = useRef<THREE.Group>(null);
-  const orbitAngleRef = useRef(0);
-  const orbitRadiusRef = useRef(0);
-  const orbitXRef = useRef(0);
-  const defaultView = VIEWS[0];
 
   const font = useFont("/AAReg.json");
 
@@ -93,10 +88,10 @@ export const UniverseTitle = ({
     () => ({
       font,
       size: 2,
-      depth: 0.4,
+      depth: 0.1,
       curveSegments: 32,
       bevelEnabled: true,
-      bevelThickness: 0.1,
+      bevelThickness: 0.05,
       bevelSize: 0.02,
       bevelOffset: 0,
       bevelSegments: 5,
@@ -111,35 +106,23 @@ export const UniverseTitle = ({
 
   const isDefaultView = viewIndex === 0;
 
-  useEffect(() => {
-    if (!isDefaultView || !defaultView) return;
-
-    // Sync orbit parameters with the current camera state so the title
-    // sits on the same orbital path when returning to default view.
-    const camPos = camera.position;
-    orbitAngleRef.current = Math.atan2(camPos.z, camPos.y);
-    orbitRadiusRef.current = Math.sqrt(camPos.y ** 2 + camPos.z ** 2);
-    orbitXRef.current = camPos.x;
-  }, [camera, defaultView, isDefaultView]);
-
-  useFrame((_, delta) => {
+  useFrame(() => {
     const root = rootRef.current;
     if (!root) return;
 
     root.visible = isDefaultView;
-    if (!isDefaultView || !defaultView) return;
+    if (!isDefaultView) return;
 
-    // Match the orbit math in CameraRig so the title rides the same path.
-    const rotationSpeed = -0.01;
-    orbitAngleRef.current -= delta * rotationSpeed;
-
-    const orbitAngle = orbitAngleRef.current + angleOffset;
-    const orbitRadius = orbitRadiusRef.current + radialOffset;
+    // Derive the orbit from the live camera position to avoid drift and
+    // re-sync issues when switching between camera views.
+    const camPos = camera.position;
+    const orbitAngle = Math.atan2(camPos.z, camPos.y) + angleOffset;
+    const orbitRadius = Math.sqrt(camPos.y ** 2 + camPos.z ** 2) + radialOffset;
 
     const newY = Math.cos(orbitAngle) * orbitRadius;
     const newZ = Math.sin(orbitAngle) * orbitRadius;
 
-    root.position.set(orbitXRef.current + xOffset, newY, newZ);
+    root.position.set(camPos.x + xOffset, newY, newZ);
 
     // Keep the title aligned with the orbit path (around the X axis),
     // without matching the camera orientation.
@@ -173,17 +156,40 @@ export const UniverseTitle = ({
             <group key={shapeIndex}>
               <AnimatedDashLine
                 shape={shape}
-                color="cyan"
-                thickness={3}
+                color={[0, 2, 2]}
+                thickness={2}
                 speed={0.1}
+                gapSize={0}
               />
               {shape.holes.map((hole, holeIndex) => (
                 <AnimatedDashLine
                   key={holeIndex}
                   shape={hole}
-                  color="cyan"
-                  thickness={3}
+                  color={[0, 2, 2]}
+                  thickness={2}
                   speed={0.1}
+                  gapSize={0}
+                />
+              ))}
+            </group>
+          ))}
+        </group>
+        <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
+          {shapes.map((shape, shapeIndex) => (
+            <group key={shapeIndex}>
+              <AnimatedDashLine
+                shape={shape}
+                color={[0.1, 0.1, 0.1]}
+                thickness={0.2}
+                gapSize={0}
+              />
+              {shape.holes.map((hole, holeIndex) => (
+                <AnimatedDashLine
+                  key={holeIndex}
+                  shape={hole}
+                  color={[0.1, 0.1, 0.1]}
+                  thickness={0.2}
+                  gapSize={0}
                 />
               ))}
             </group>
@@ -205,7 +211,7 @@ export const UniverseTitle = ({
                   key={holeIndex}
                   shape={hole}
                   color={[0, 1, 1]}
-                  thickness={3}
+                  thickness={1}
                   speed={0.5}
                   dashSize={1}
                   gapSize={0}
