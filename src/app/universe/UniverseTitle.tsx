@@ -80,7 +80,9 @@ export const UniverseTitle = ({
 }: UniverseTitleProps) => {
   const { camera } = useThree();
   const rootRef = useRef<THREE.Group>(null);
-
+  const mousePos = useRef(new THREE.Vector2(0, 0));
+  const mouseVel = useRef(new THREE.Vector2(0, 0));
+  const targetMouse = useRef(new THREE.Vector2(0, 0));
   const font = useFont("/AAReg.json");
 
   const text = "Shane Cranor";
@@ -106,12 +108,41 @@ export const UniverseTitle = ({
 
   const isDefaultView = viewIndex === 0;
 
-  useFrame(() => {
+  useFrame(({ clock, pointer }, delta) => {
     const root = rootRef.current;
     if (!root) return;
 
-    root.visible = isDefaultView;
+    root.visible = true;
     if (!isDefaultView) return;
+
+    //mouse easing
+    targetMouse.current.set(pointer.x, pointer.y);
+
+    const follow = 100; // acceleration toward target
+    const friction = 8; // velocity decay
+
+    // v += (target - pos) * follow * dt
+    const targetMinusPosX = targetMouse.current.x - mousePos.current.x;
+    const targetMinusPosY = targetMouse.current.y - mousePos.current.y;
+    const xDir = Math.sign(targetMinusPosX);
+    const yDir = Math.sign(targetMinusPosY);
+
+    mouseVel.current.x +=
+      targetMinusPosX * targetMinusPosX * follow * delta * xDir;
+    mouseVel.current.y +=
+      targetMinusPosY * targetMinusPosY * follow * delta * yDir;
+
+    // v *= exp(-friction*dt)
+    const f = Math.exp(-friction * delta);
+    mouseVel.current.multiplyScalar(f);
+
+    // pos += v * dt
+    mousePos.current.addScaledVector(mouseVel.current, delta);
+
+    const easedX = mousePos.current.x;
+    const easedY = mousePos.current.y;
+
+    // end mouse easing
 
     // Derive the orbit from the live camera position to avoid drift and
     // re-sync issues when switching between camera views.
@@ -126,7 +157,12 @@ export const UniverseTitle = ({
 
     // Keep the title aligned with the orbit path (around the X axis),
     // without matching the camera orientation.
-    root.rotation.set(orbitAngle + 0.4, 0, 0);
+    const t = clock.getElapsedTime();
+    root.rotation.set(
+      orbitAngle + 0.5 - easedY * 0.5,
+      Math.sin(t) * 0.005 + easedX * 0.08,
+      Math.cos(t) * 0.005,
+    );
   });
 
   return (

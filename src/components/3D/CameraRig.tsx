@@ -11,7 +11,7 @@ export type ViewConfig = {
 
 export const VIEWS: ViewConfig[] = [
   { label: "Default", position: [0, 2.3, 5], target: [0, 10, 0] },
-  { label: "Low Orbit", position: [5, 2, 0], target: [0, 1, 0] },
+  { label: "Low Orbit", position: [9, 2, 0], target: [0, 1, 0] },
   { label: "Top Down", position: [0, 8, 0.01], target: [0, 0, 0] },
 ];
 
