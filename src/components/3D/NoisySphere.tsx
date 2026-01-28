@@ -29,6 +29,10 @@ function addNoiseToSphere(
   geometry: THREE.SphereGeometry,
   noiseAmount: number = 0.1,
   flatCenter: boolean = true,
+  poleNoiseFloor: number = 0.25,
+  equatorPower: number = 1.5,
+  yNoiseScale: number = 0.4,
+  displaceYScale: number = 0.6,
 ) {
   const positions = geometry.attributes.position;
   const vertex = new THREE.Vector3();
@@ -36,18 +40,30 @@ function addNoiseToSphere(
   for (let i = 0; i < positions.count; i++) {
     vertex.fromBufferAttribute(positions, i);
     const distance = vertex.length();
+    const normalY = Math.abs(vertex.y) / distance;
+    const equatorWeight = Math.pow(1 - normalY, equatorPower);
+    const axisWeight = THREE.MathUtils.lerp(poleNoiseFloor, 1, equatorWeight);
+    const direction = vertex.clone().normalize();
 
     // Simplex noise for realistic mountain-like terrain
     let noise =
-      simplexNoise3DFractal(vertex.x, vertex.y, vertex.z, 4) * noiseAmount;
+      simplexNoise3DFractal(vertex.x, vertex.y * yNoiseScale, vertex.z, 4) *
+      noiseAmount;
+
+    // Reduce noise near the poles, keep more around the equator (x/z-heavy).
+    noise *= axisWeight;
 
     if (flatCenter) {
       // Reduce noise around y = 0 for flat center
       noise *=
         -1.5 * Math.cos(Math.min(Math.abs(vertex.y) * 1.5, Math.PI)) + 1.7;
     }
-
-    vertex.normalize().multiplyScalar(distance + noise);
+    const displacement = new THREE.Vector3(
+      direction.x,
+      direction.y * displaceYScale,
+      direction.z,
+    );
+    vertex.addScaledVector(displacement, noise);
     positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
   }
 
@@ -113,6 +129,10 @@ type NoisySphereProps = {
   edgeThreshold?: number;
   edgeLineWidth?: number;
   flatCenter?: boolean;
+  poleNoiseFloor?: number;
+  equatorPower?: number;
+  yNoiseScale?: number;
+  displaceYScale?: number;
 };
 
 export function NoisySphere({
@@ -122,18 +142,38 @@ export function NoisySphere({
   noiseAmount = 0.08,
   rotation = [0, 0, Math.PI / 2],
   edgeColor,
-  edgeThreshold = 0.9,
-  edgeLineWidth = 1,
   flatCenter = true,
+  poleNoiseFloor = 0.25,
+  equatorPower = 1.5,
+  yNoiseScale = 0.4,
+  displaceYScale = 0.6,
 }: NoisySphereProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   const { sphereGeometry, wireframeGeometry } = useMemo(() => {
     const geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
-    addNoiseToSphere(geo, noiseAmount, flatCenter);
+    addNoiseToSphere(
+      geo,
+      noiseAmount,
+      flatCenter,
+      poleNoiseFloor,
+      equatorPower,
+      yNoiseScale,
+      displaceYScale,
+    );
     const wireframe = createSphereWireframe(geo, widthSegments, heightSegments);
     return { sphereGeometry: geo, wireframeGeometry: wireframe };
-  }, [radius, widthSegments, heightSegments, noiseAmount, flatCenter]);
+  }, [
+    radius,
+    widthSegments,
+    heightSegments,
+    noiseAmount,
+    flatCenter,
+    poleNoiseFloor,
+    equatorPower,
+    yNoiseScale,
+    displaceYScale,
+  ]);
 
   useFrame(({ clock }) => {
     if (groupRef.current) {

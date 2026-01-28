@@ -34,6 +34,11 @@ export const ThreeJsUniverse = () => {
     [],
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
+  const [noiseAmount, setNoiseAmount] = useState(0.3);
+  const [poleNoiseFloor, setPoleNoiseFloor] = useState(0.25);
+  const [equatorPower, setEquatorPower] = useState(1.5);
+  const [yNoiseScale, setYNoiseScale] = useState(0.4);
+  const [displaceYScale, setDisplaceYScale] = useState(0.6);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -47,6 +52,48 @@ export const ThreeJsUniverse = () => {
   }, []);
 
   const activeView = VIEWS[activeViewIndex];
+  const noiseControls = [
+    {
+      label: "Noise",
+      value: noiseAmount,
+      min: 0,
+      max: 0.6,
+      step: 0.01,
+      onChange: setNoiseAmount,
+    },
+    {
+      label: "Y Displace",
+      value: displaceYScale,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onChange: setDisplaceYScale,
+    },
+    {
+      label: "Pole Floor",
+      value: poleNoiseFloor,
+      min: 0,
+      max: 0.8,
+      step: 0.01,
+      onChange: setPoleNoiseFloor,
+    },
+    {
+      label: "Equator Power",
+      value: equatorPower,
+      min: 0.5,
+      max: 3,
+      step: 0.05,
+      onChange: setEquatorPower,
+    },
+    {
+      label: "Noise Y Scale",
+      value: yNoiseScale,
+      min: 0.1,
+      max: 1.5,
+      step: 0.05,
+      onChange: setYNoiseScale,
+    },
+  ];
 
   return (
     <>
@@ -59,15 +106,25 @@ export const ThreeJsUniverse = () => {
             radius={5}
             widthSegments={350}
             heightSegments={70}
-            noiseAmount={0.3}
+            noiseAmount={noiseAmount}
             edgeColor={edgeColor}
+            flatCenter={false}
+            poleNoiseFloor={poleNoiseFloor}
+            equatorPower={equatorPower}
+            yNoiseScale={yNoiseScale}
+            displaceYScale={displaceYScale}
           />
           <NoisySphere
             radius={5}
             widthSegments={32}
             heightSegments={32}
-            noiseAmount={0.3}
+            noiseAmount={noiseAmount}
             edgeColor={edgeColor}
+            flatCenter={false}
+            poleNoiseFloor={poleNoiseFloor}
+            equatorPower={equatorPower}
+            yNoiseScale={yNoiseScale}
+            displaceYScale={displaceYScale}
           />
         </Detailed>
         <Stars
@@ -106,6 +163,28 @@ export const ThreeJsUniverse = () => {
           {`${activeView.label}`}
         </div>
       )}
+      <div className="universe-controls">
+        {noiseControls.map((control) => (
+          <label className="universe-control" key={control.label}>
+            <span className="universe-control__label">
+              <span>{control.label}</span>
+              <span className="universe-control__value">
+                {control.value.toFixed(2)}
+              </span>
+            </span>
+            <input
+              type="range"
+              min={control.min}
+              max={control.max}
+              step={control.step}
+              value={control.value}
+              onChange={(event) =>
+                control.onChange(parseFloat(event.target.value))
+              }
+            />
+          </label>
+        ))}
+      </div>
       <Loader />
     </>
   );
