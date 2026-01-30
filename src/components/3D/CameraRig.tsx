@@ -7,10 +7,16 @@ export type ViewConfig = {
   label: string;
   position: [number, number, number];
   target: [number, number, number];
+  surfaceUp?: boolean;
 };
 
 export const VIEWS: ViewConfig[] = [
-  { label: "Default", position: [0, 2.3, 5], target: [0, 10, 0] },
+  {
+    label: "Default",
+    position: [0, 5.15, 0],
+    target: [0, 5.15, -18],
+    surfaceUp: true,
+  },
   { label: "Low Orbit", position: [9, 2, 0], target: [0, 1, 0] },
   { label: "Top Down", position: [0, 8, 0.01], target: [0, 0, 0] },
 ];
@@ -123,14 +129,16 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     const newTargetZ =
       Math.sin(targetAngleRef.current) * targetRadiusRef.current;
 
-    // Calculate up vector perpendicular to orbital plane (around X-axis)
-    // Up vector should point in the direction perpendicular to the view
-    const upY = Math.sin(orbitAngleRef.current);
-    const upZ = -Math.cos(orbitAngleRef.current);
-
     // Update camera position, target, and up vector manually for orbiting
     controls.camera.position.set(view.position[0], newCamY, newCamZ);
-    controls.camera.up.set(0, upY, upZ);
+    if (view.surfaceUp) {
+      controls.camera.up.copy(controls.camera.position).normalize();
+    } else {
+      // Up vector perpendicular to the orbital plane (around X-axis).
+      const upY = Math.sin(orbitAngleRef.current);
+      const upZ = -Math.cos(orbitAngleRef.current);
+      controls.camera.up.set(0, upY, upZ);
+    }
     controls.camera.lookAt(view.target[0], newTargetY, newTargetZ);
     controls.camera.updateProjectionMatrix();
   });
