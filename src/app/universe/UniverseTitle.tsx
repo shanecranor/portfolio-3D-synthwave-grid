@@ -70,13 +70,15 @@ type UniverseTitleProps = {
   angleOffset?: number;
   radialOffset?: number;
   xOffset?: number;
+  textScale?: number;
 };
 
 export const UniverseTitle = ({
   viewIndex,
-  angleOffset = -0.6,
-  radialOffset = 1.8,
-  xOffset = -0.5,
+  angleOffset = -0.2,
+  radialOffset = 0.1,
+  xOffset = -0.2,
+  textScale = 0.3,
 }: UniverseTitleProps) => {
   const { camera } = useThree();
   const rootRef = useRef<THREE.Group>(null);
@@ -159,7 +161,7 @@ export const UniverseTitle = ({
     // without matching the camera orientation.
     const t = clock.getElapsedTime();
     root.rotation.set(
-      orbitAngle + 0.5 - easedY * 0.5,
+      orbitAngle + 0.2 - easedY * 0.5,
       Math.sin(t) * 0.005 + easedX * 0.08,
       Math.cos(t) * 0.005,
     );
@@ -167,7 +169,7 @@ export const UniverseTitle = ({
 
   return (
     <group ref={rootRef}>
-      <Center>
+      <Center scale={textScale}>
         <mesh>
           <textGeometry args={[text, config]} />
           <MeshTransmissionMaterial
