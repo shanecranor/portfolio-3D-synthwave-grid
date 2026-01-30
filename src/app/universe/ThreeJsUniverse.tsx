@@ -11,12 +11,7 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import {
-  CubeCamera,
-  Detailed,
-  Loader,
-  Stars,
-} from "@react-three/drei";
+import { CubeCamera, Detailed, Loader, Stars } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { RX7Model } from "@/components/3D/RX7Model";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
@@ -39,6 +34,7 @@ export const ThreeJsUniverse = () => {
   const [equatorPower, setEquatorPower] = useState(1.5);
   const [yNoiseScale, setYNoiseScale] = useState(0.4);
   const [displaceYScale, setDisplaceYScale] = useState(0.6);
+  const [cylinderMorph, setCylinderMorph] = useState(0);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -93,6 +89,14 @@ export const ThreeJsUniverse = () => {
       step: 0.05,
       onChange: setYNoiseScale,
     },
+    {
+      label: "Sphere → Cylinder",
+      value: cylinderMorph,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onChange: setCylinderMorph,
+    },
   ];
 
   return (
@@ -108,11 +112,12 @@ export const ThreeJsUniverse = () => {
             heightSegments={70}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
-            flatCenter={false}
+            flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
             yNoiseScale={yNoiseScale}
             displaceYScale={displaceYScale}
+            cylinderMorph={cylinderMorph}
           />
           <NoisySphere
             radius={5}
@@ -120,11 +125,12 @@ export const ThreeJsUniverse = () => {
             heightSegments={32}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
-            flatCenter={false}
+            flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
             yNoiseScale={yNoiseScale}
             displaceYScale={displaceYScale}
+            cylinderMorph={cylinderMorph}
           />
         </Detailed>
         <Stars
