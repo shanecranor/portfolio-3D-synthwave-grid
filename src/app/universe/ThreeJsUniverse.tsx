@@ -101,7 +101,7 @@ export const ThreeJsUniverse = () => {
 
   return (
     <>
-      <Canvas camera={{ fov: 100 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
+      <Canvas camera={{ fov: 75 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
         <UniverseTitle viewIndex={activeViewIndex} />
