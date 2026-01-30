@@ -17,8 +17,8 @@ export const VIEWS: ViewConfig[] = [
     target: [0, 5.15 * 2, -18 * 2],
     surfaceUp: true,
   },
-  { label: "Low Orbit", position: [9, 2, 0], target: [0, 1, 0] },
-  { label: "Top Down", position: [0, 8, 0.01], target: [0, 0, 0] },
+  { label: "Zoom Out", position: [0, 10, 10], target: [0, 20, -36] },
+  { label: "Top Down", position: [0, 16, 0.0], target: [0, 1, -0.1] },
 ];
 
 type CameraRigProps = {

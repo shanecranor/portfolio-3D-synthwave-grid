@@ -105,7 +105,7 @@ export const ThreeJsUniverse = () => {
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
         <UniverseTitle viewIndex={activeViewIndex} />
-        <Detailed distances={[5, 15]}>
+        <Detailed distances={[3, 25]}>
           <NoisySphere
             radius={10}
             widthSegments={350}
