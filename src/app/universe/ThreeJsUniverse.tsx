@@ -30,11 +30,11 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [noiseAmount, setNoiseAmount] = useState(0.3);
-  const [poleNoiseFloor, setPoleNoiseFloor] = useState(0.25);
-  const [equatorPower, setEquatorPower] = useState(1.5);
+  const [displaceYScale, setDisplaceYScale] = useState(0.0);
+  const [poleNoiseFloor, setPoleNoiseFloor] = useState(0.0);
+  const [equatorPower, setEquatorPower] = useState(0.85);
   const [yNoiseScale, setYNoiseScale] = useState(0.4);
-  const [displaceYScale, setDisplaceYScale] = useState(0.6);
-  const [cylinderMorph, setCylinderMorph] = useState(0);
+  const [cylinderMorph, setCylinderMorph] = useState(0.25);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -107,7 +107,7 @@ export const ThreeJsUniverse = () => {
         <UniverseTitle viewIndex={activeViewIndex} />
         <Detailed distances={[5, 15]}>
           <NoisySphere
-            radius={5}
+            radius={10}
             widthSegments={350}
             heightSegments={70}
             noiseAmount={noiseAmount}
@@ -120,7 +120,7 @@ export const ThreeJsUniverse = () => {
             cylinderMorph={cylinderMorph}
           />
           <NoisySphere
-            radius={5}
+            radius={10}
             widthSegments={32}
             heightSegments={32}
             noiseAmount={noiseAmount}
@@ -169,7 +169,7 @@ export const ThreeJsUniverse = () => {
           {`${activeView.label}`}
         </div>
       )}
-      <div className="universe-controls">
+      {/* <div className="universe-controls">
         {noiseControls.map((control) => (
           <label className="universe-control" key={control.label}>
             <span className="universe-control__label">
@@ -190,7 +190,7 @@ export const ThreeJsUniverse = () => {
             />
           </label>
         ))}
-      </div>
+      </div> */}
       <Loader />
     </>
   );

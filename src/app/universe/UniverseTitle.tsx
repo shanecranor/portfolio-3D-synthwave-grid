@@ -74,9 +74,9 @@ type UniverseTitleProps = {
 
 export const UniverseTitle = ({
   viewIndex,
-  angleOffset = -0.8,
-  radialOffset = 0.8,
-  xOffset = -0.4,
+  angleOffset = -0.6,
+  radialOffset = 1.8,
+  xOffset = -0.5,
 }: UniverseTitleProps) => {
   const { camera } = useThree();
   const rootRef = useRef<THREE.Group>(null);
