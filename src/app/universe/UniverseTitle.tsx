@@ -80,7 +80,8 @@ export const UniverseTitle = ({
   xOffset = -0.2,
   textScale = 0.3,
 }: UniverseTitleProps) => {
-  const { camera } = useThree();
+  const camera = useThree((state) => state.camera);
+  const viewportWidth = useThree((state) => state.viewport.width);
   const rootRef = useRef<THREE.Group>(null);
   const mousePos = useRef(new THREE.Vector2(0, 0));
   const mouseVel = useRef(new THREE.Vector2(0, 0));
@@ -109,6 +110,19 @@ export const UniverseTitle = ({
   }, [font, text, config.size]);
 
   const isDefaultView = viewIndex === 0;
+  const responsiveTextScale = useMemo(() => {
+    const minWidth = 6;
+    const maxWidth = 24;
+    const minScale = textScale * 0.15;
+    const maxScale = textScale * 0.8;
+    const t = THREE.MathUtils.clamp(
+      (viewportWidth - minWidth) / (maxWidth - minWidth),
+      0,
+      1,
+    );
+
+    return THREE.MathUtils.lerp(minScale, maxScale, t);
+  }, [textScale, viewportWidth]);
 
   useFrame(({ clock, pointer }, delta) => {
     const root = rootRef.current;
@@ -155,7 +169,7 @@ export const UniverseTitle = ({
     const newY = Math.cos(orbitAngle) * orbitRadius;
     const newZ = Math.sin(orbitAngle) * orbitRadius;
 
-    root.position.set(camPos.x + xOffset, newY, newZ);
+    root.position.set(camPos.x + xOffset * responsiveTextScale, newY, newZ);
 
     // Keep the title aligned with the orbit path (around the X axis),
     // without matching the camera orientation.
@@ -169,7 +183,7 @@ export const UniverseTitle = ({
 
   return (
     <group ref={rootRef}>
-      <Center scale={textScale}>
+      <Center scale={responsiveTextScale}>
         <mesh>
           <textGeometry args={[text, config]} />
           <MeshTransmissionMaterial
