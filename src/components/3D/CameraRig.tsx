@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
-import { CameraControls } from "@react-three/drei";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 export type ViewConfig = {
@@ -26,122 +25,92 @@ type CameraRigProps = {
 };
 
 export function CameraRig({ viewIndex }: CameraRigProps) {
-  const [controls, setControls] = useState<CameraControls | null>(null);
+  const camera = useThree((state) => state.camera);
   const initializedRef = useRef(false);
-  const isTransitioningRef = useRef(false);
   const orbitAngleRef = useRef(0);
-  const cameraRadiusRef = useRef(0);
-  const targetRadiusRef = useRef(0);
   const targetAngleRef = useRef(0);
-  const previousViewIndexRef = useRef(viewIndex);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentTargetRef = useRef(new THREE.Vector3());
+  const currentUpRef = useRef(new THREE.Vector3(0, 1, 0));
+  const desiredPos = useMemo(() => new THREE.Vector3(), []);
+  const desiredTarget = useMemo(() => new THREE.Vector3(), []);
+  const desiredUp = useMemo(() => new THREE.Vector3(), []);
 
   const view = VIEWS[viewIndex];
   const isDefaultView = viewIndex === 0;
 
   useEffect(() => {
-    if (!controls || !view) return;
+    if (!view) return;
 
-    const viewChanged = previousViewIndexRef.current !== viewIndex;
-
-    // Initialize orbit angles and radii based on starting positions
     if (!initializedRef.current) {
-      orbitAngleRef.current = Math.atan2(view.position[2], view.position[1]);
-      cameraRadiusRef.current = Math.sqrt(
-        view.position[1] ** 2 + view.position[2] ** 2,
-      );
-      targetAngleRef.current = Math.atan2(view.target[2], view.target[1]);
-      targetRadiusRef.current = Math.sqrt(
-        view.target[1] ** 2 + view.target[2] ** 2,
-      );
+      camera.position.set(...view.position);
+      currentTargetRef.current.set(...view.target);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(currentTargetRef.current);
       initializedRef.current = true;
-
-      // Set initial position without transition
-      controls.setLookAt(
-        ...view.position,
-        ...view.target,
-        true, // skip transition
-      );
-    } else if (viewChanged) {
-      // Cancel any existing transition timeout
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-
-      // When switching views, mark as transitioning
-      isTransitioningRef.current = true;
-      previousViewIndexRef.current = viewIndex;
-
-      // Trigger smooth transition
-      controls.setLookAt(
-        ...view.position,
-        ...view.target,
-        true, //enable transition        false, // enable transition
-      );
-
-      // Wait for the transition to complete before allowing orbiting
-      transitionTimeoutRef.current = setTimeout(() => {
-        // After transition completes, sync orbit parameters with current camera position
-        // This ensures smooth start of orbiting from wherever the camera ended up
-        const camPos = controls.camera.position;
-        orbitAngleRef.current = Math.atan2(camPos.z, camPos.y);
-        cameraRadiusRef.current = Math.sqrt(camPos.y ** 2 + camPos.z ** 2);
-
-        const target = controls.getTarget(new THREE.Vector3());
-        targetAngleRef.current = Math.atan2(target.z, target.y);
-        targetRadiusRef.current = Math.sqrt(target.y ** 2 + target.z ** 2);
-
-        isTransitioningRef.current = false;
-        transitionTimeoutRef.current = null;
-      }, 2500);
     }
 
-    // Cleanup function to cancel timeout on unmount
-    return () => {
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-    };
-  }, [controls, view, viewIndex]);
+    if (viewIndex === 0) {
+      // Sync orbit angle to current camera/target to avoid jumps.
+      orbitAngleRef.current = Math.atan2(camera.position.z, camera.position.y);
+      targetAngleRef.current = Math.atan2(
+        currentTargetRef.current.z,
+        currentTargetRef.current.y,
+      );
+    }
+  }, [camera, view, viewIndex]);
 
   useFrame((state, delta) => {
-    if (!controls) return;
+    if (!view) return;
 
-    // Only orbit when in default view and not transitioning
-    if (!isDefaultView || isTransitioningRef.current) {
-      // Let CameraControls handle the transition
-      controls.update(delta);
-      return;
+    const orbitSpeed = 0.01;
+    if (isDefaultView) {
+      orbitAngleRef.current += delta * orbitSpeed;
+      targetAngleRef.current += delta * orbitSpeed;
+
+      const camRadius = Math.sqrt(
+        view.position[1] ** 2 + view.position[2] ** 2,
+      );
+      const targetRadius = Math.sqrt(
+        view.target[1] ** 2 + view.target[2] ** 2,
+      );
+
+      desiredPos.set(
+        view.position[0],
+        Math.cos(orbitAngleRef.current) * camRadius,
+        Math.sin(orbitAngleRef.current) * camRadius,
+      );
+
+      desiredTarget.set(
+        view.target[0],
+        Math.cos(targetAngleRef.current) * targetRadius,
+        Math.sin(targetAngleRef.current) * targetRadius,
+      );
+    } else {
+      desiredPos.set(...view.position);
+      desiredTarget.set(...view.target);
     }
 
-    // Update orbit angle (opposite direction to cancel sphere rotation on x-axis)
-    const rotationSpeed = -0.01;
-    orbitAngleRef.current -= delta * rotationSpeed;
-    targetAngleRef.current -= delta * rotationSpeed;
-
-    // Orbit camera around X axis
-    const newCamY = Math.cos(orbitAngleRef.current) * cameraRadiusRef.current;
-    const newCamZ = Math.sin(orbitAngleRef.current) * cameraRadiusRef.current;
-
-    // Orbit target around X axis to maintain viewing angle
-    const newTargetY =
-      Math.cos(targetAngleRef.current) * targetRadiusRef.current;
-    const newTargetZ =
-      Math.sin(targetAngleRef.current) * targetRadiusRef.current;
-
-    // Update camera position, target, and up vector manually for orbiting
-    controls.camera.position.set(view.position[0], newCamY, newCamZ);
     if (view.surfaceUp) {
-      controls.camera.up.copy(controls.camera.position).normalize();
-    } else {
-      // Up vector perpendicular to the orbital plane (around X-axis).
+      desiredUp.copy(desiredPos).normalize();
+    } else if (isDefaultView) {
       const upY = Math.sin(orbitAngleRef.current);
       const upZ = -Math.cos(orbitAngleRef.current);
-      controls.camera.up.set(0, upY, upZ);
+      desiredUp.set(0, upY, upZ);
+    } else {
+      desiredUp.set(0, 1, 0);
     }
-    controls.camera.lookAt(view.target[0], newTargetY, newTargetZ);
-    controls.camera.updateProjectionMatrix();
+
+    const posEase = 1 - Math.exp(-4 * delta);
+    const targetEase = 1 - Math.exp(-5 * delta);
+    const upEase = 1 - Math.exp(-6 * delta);
+
+    camera.position.lerp(desiredPos, posEase);
+    currentTargetRef.current.lerp(desiredTarget, targetEase);
+    currentUpRef.current.lerp(desiredUp, upEase).normalize();
+
+    camera.up.copy(currentUpRef.current);
+    camera.lookAt(currentTargetRef.current);
   });
 
-  return <CameraControls ref={(ref) => setControls(ref)} smoothTime={0.9} />;
+  return null;
 }
