@@ -19,8 +19,8 @@ const COMPUTER_MODELS = [
 ] as const;
 
 // const COMPUTER_MODELS = [
-//   "/assets/bass/electrical_bass_guitar/scene.gltf",
-//   "/assets/bass/low_poly_bass_guitar/scene.gltf", 
+//   // "/assets/bass/electrical_bass_guitar/scene.gltf",
+//   // "/assets/bass/low_poly_bass_guitar/scene.gltf", 
 //   "/assets/bass/low_polygons_shihos_bass/scene.gltf",
 // ];
 
