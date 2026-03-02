@@ -59,18 +59,13 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     }
 
     if (viewIndex === 0) {
-      // Sync the orbit state from the live camera/target when re-entering
-      // the default view so the transition stays continuous.
-      orbitAngleRef.current = Math.atan2(camera.position.z, camera.position.y);
-      targetAngleRef.current = Math.atan2(
-        currentTargetRef.current.z,
-        currentTargetRef.current.y,
-      );
-      camRadiusRef.current = Math.hypot(camera.position.y, camera.position.z);
-      targetRadiusRef.current = Math.hypot(
-        currentTargetRef.current.y,
-        currentTargetRef.current.z,
-      );
+      orbitAngleRef.current = Math.atan2(view.position[2], view.position[1]);
+      targetAngleRef.current = Math.atan2(view.target[2], view.target[1]);
+      camRadiusRef.current = Math.hypot(view.position[1], view.position[2]);
+      targetRadiusRef.current = Math.hypot(view.target[1], view.target[2]);
+      currentTargetRef.current.set(...view.target);
+      currentUpRef.current.set(0, 1, 0);
+      camera.up.set(0, 1, 0);
     }
   }, [camera, view, viewIndex]);
 
