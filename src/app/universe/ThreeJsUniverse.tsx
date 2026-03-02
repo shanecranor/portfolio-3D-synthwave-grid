@@ -16,6 +16,7 @@ import { NoisySphere } from "@/components/3D/NoisySphere";
 import { RX7Model } from "@/components/3D/RX7Model";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
+import { UniverseComputer } from "@/components/3D/UniverseComputer";
 
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 0.2;
@@ -29,6 +30,7 @@ export const ThreeJsUniverse = () => {
     [],
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
+  const [activeComputerIndex, setActiveComputerIndex] = useState(0);
   const [noiseAmount, setNoiseAmount] = useState(0.3);
   const [displaceYScale, setDisplaceYScale] = useState(0.0);
   const [poleNoiseFloor, setPoleNoiseFloor] = useState(0.0);
@@ -41,6 +43,10 @@ export const ThreeJsUniverse = () => {
       if (event.code === "Space") {
         event.preventDefault();
         setActiveViewIndex((current) => (current + 1) % VIEWS.length);
+      }
+      if (event.code === "KeyC") {
+        event.preventDefault();
+        setActiveComputerIndex((current) => (current + 1) % 3);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -105,6 +111,10 @@ export const ThreeJsUniverse = () => {
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
         <UniverseTitle viewIndex={activeViewIndex} />
+        <UniverseComputer
+          viewIndex={activeViewIndex}
+          modelIndex={activeComputerIndex}
+        />
         <Detailed distances={[3, 25]}>
           <NoisySphere
             radius={10}
