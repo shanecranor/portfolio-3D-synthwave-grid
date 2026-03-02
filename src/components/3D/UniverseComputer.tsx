@@ -16,8 +16,6 @@ type UniverseComputerProps = {
 
 const COMPUTER_MODELS = [
   "/assets/computer/old_computer/scene.gltf",
-  "/assets/computer/retro_computer/scene.gltf",
-  "/assets/computer/retro_crt_computer_1990s_desktop_pc/scene.gltf",
 ] as const;
 
 const BLACK_FILL_COLOR = new THREE.Color(0x000000);
