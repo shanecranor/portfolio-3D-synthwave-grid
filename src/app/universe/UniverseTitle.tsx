@@ -11,6 +11,11 @@ import {
   Center,
   useFont,
 } from "@react-three/drei";
+import {
+  DEFAULT_UNIVERSE_ANCHOR_Y,
+  DEFAULT_UNIVERSE_ANCHOR_Z,
+  DEFAULT_UNIVERSE_X_OFFSET,
+} from "@/components/3D/universeLayout";
 
 extend({ TextGeometry });
 declare module "@react-three/fiber" {
@@ -67,20 +72,13 @@ const AnimatedDashLine = ({
 
 type UniverseTitleProps = {
   viewIndex: number;
-  angleOffset?: number;
-  radialOffset?: number;
-  xOffset?: number;
   textScale?: number;
 };
 
 export const UniverseTitle = ({
   viewIndex,
-  angleOffset = -0.2,
-  radialOffset = 0.1,
-  xOffset = -0.2,
   textScale = 0.3,
 }: UniverseTitleProps) => {
-  const camera = useThree((state) => state.camera);
   const viewportWidth = useThree((state) => state.viewport.width);
   const rootRef = useRef<THREE.Group>(null);
   const mousePos = useRef(new THREE.Vector2(0, 0));
@@ -128,7 +126,7 @@ export const UniverseTitle = ({
     const root = rootRef.current;
     if (!root) return;
 
-    root.visible = true;
+    root.visible = isDefaultView;
     if (!isDefaultView) return;
 
     //mouse easing
@@ -160,22 +158,15 @@ export const UniverseTitle = ({
 
     // end mouse easing
 
-    // Derive the orbit from the live camera position to avoid drift and
-    // re-sync issues when switching between camera views.
-    const camPos = camera.position;
-    const orbitAngle = Math.atan2(camPos.z, camPos.y) + angleOffset;
-    const orbitRadius = Math.sqrt(camPos.y ** 2 + camPos.z ** 2) + radialOffset;
+    root.position.set(
+      DEFAULT_UNIVERSE_X_OFFSET * responsiveTextScale,
+      DEFAULT_UNIVERSE_ANCHOR_Y,
+      DEFAULT_UNIVERSE_ANCHOR_Z,
+    );
 
-    const newY = Math.cos(orbitAngle) * orbitRadius;
-    const newZ = Math.sin(orbitAngle) * orbitRadius;
-
-    root.position.set(camPos.x + xOffset * responsiveTextScale, newY, newZ);
-
-    // Keep the title aligned with the orbit path (around the X axis),
-    // without matching the camera orientation.
     const t = clock.getElapsedTime();
     root.rotation.set(
-      orbitAngle + 0.2 - easedY * 0.5,
+      -easedY * 0.5,
       Math.sin(t) * 0.005 + easedX * 0.08,
       Math.cos(t) * 0.005,
     );

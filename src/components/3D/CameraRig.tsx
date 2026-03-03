@@ -32,10 +32,6 @@ type CameraRigProps = {
 export function CameraRig({ viewIndex }: CameraRigProps) {
   const camera = useThree((state) => state.camera);
   const initializedRef = useRef(false);
-  const orbitAngleRef = useRef(0);
-  const targetAngleRef = useRef(0);
-  const camRadiusRef = useRef(0);
-  const targetRadiusRef = useRef(0);
   const currentTargetRef = useRef(new THREE.Vector3());
   const currentUpRef = useRef(new THREE.Vector3(0, 1, 0));
   const desiredPos = useMemo(() => new THREE.Vector3(), []);
@@ -43,7 +39,6 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
   const desiredUp = useMemo(() => new THREE.Vector3(), []);
 
   const view = VIEWS[viewIndex];
-  const isDefaultView = viewIndex === 0;
 
   useEffect(() => {
     if (!view) return;
@@ -53,59 +48,15 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
       currentTargetRef.current.set(...view.target);
       camera.up.set(0, 1, 0);
       camera.lookAt(currentTargetRef.current);
-      camRadiusRef.current = Math.hypot(view.position[1], view.position[2]);
-      targetRadiusRef.current = Math.hypot(view.target[1], view.target[2]);
       initializedRef.current = true;
     }
+  }, [camera, view]);
 
-    if (viewIndex === 0) {
-      orbitAngleRef.current = Math.atan2(view.position[2], view.position[1]);
-      targetAngleRef.current = Math.atan2(view.target[2], view.target[1]);
-      camRadiusRef.current = Math.hypot(view.position[1], view.position[2]);
-      targetRadiusRef.current = Math.hypot(view.target[1], view.target[2]);
-      currentTargetRef.current.set(...view.target);
-      currentUpRef.current.set(0, 1, 0);
-      camera.up.set(0, 1, 0);
-    }
-  }, [camera, view, viewIndex]);
-
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!view) return;
 
-    const orbitSpeed = 0.01;
-    if (isDefaultView) {
-      orbitAngleRef.current += delta * orbitSpeed;
-      targetAngleRef.current += delta * orbitSpeed;
-
-      const defaultCamRadius = Math.hypot(view.position[1], view.position[2]);
-      const defaultTargetRadius = Math.hypot(view.target[1], view.target[2]);
-      const radiusEase = 1 - Math.exp(-2 * delta);
-      camRadiusRef.current = THREE.MathUtils.lerp(
-        camRadiusRef.current,
-        defaultCamRadius,
-        radiusEase,
-      );
-      targetRadiusRef.current = THREE.MathUtils.lerp(
-        targetRadiusRef.current,
-        defaultTargetRadius,
-        radiusEase,
-      );
-
-      desiredPos.set(
-        view.position[0],
-        Math.cos(orbitAngleRef.current) * camRadiusRef.current,
-        Math.sin(orbitAngleRef.current) * camRadiusRef.current,
-      );
-
-      desiredTarget.set(
-        view.target[0],
-        Math.cos(targetAngleRef.current) * targetRadiusRef.current,
-        Math.sin(targetAngleRef.current) * targetRadiusRef.current,
-      );
-    } else {
-      desiredPos.set(...view.position);
-      desiredTarget.set(...view.target);
-    }
+    desiredPos.set(...view.position);
+    desiredTarget.set(...view.target);
 
     if (view.surfaceUp) {
       desiredUp.copy(desiredPos).normalize();

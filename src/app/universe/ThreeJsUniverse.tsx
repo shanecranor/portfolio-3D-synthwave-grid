@@ -1,6 +1,6 @@
 "use client";
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Bloom,
   BrightnessContrast,
@@ -11,12 +11,40 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import { CubeCamera, Detailed, Loader, Stars } from "@react-three/drei";
+import { Detailed, Loader, Stars } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
-import { RX7Model } from "@/components/3D/RX7Model";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
 import { UniverseComputer } from "@/components/3D/UniverseComputer";
+
+function RotatingStars() {
+  const starfieldRef = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    const starfield = starfieldRef.current;
+    if (!starfield) return;
+
+    starfield.rotation.y += delta * 0.03;
+    starfield.rotation.x = THREE.MathUtils.lerp(
+      starfield.rotation.x,
+      0.12,
+      1 - Math.exp(-2 * delta),
+    );
+  });
+
+  return (
+    <group ref={starfieldRef}>
+      <Stars
+        radius={50}
+        depth={500}
+        count={2000}
+        factor={5}
+        saturation={1}
+        speed={0}
+      />
+    </group>
+  );
+}
 
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 0.2;
@@ -31,12 +59,12 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
-  const [noiseAmount, setNoiseAmount] = useState(0.3);
-  const [displaceYScale, setDisplaceYScale] = useState(0.0);
-  const [poleNoiseFloor, setPoleNoiseFloor] = useState(0.0);
-  const [equatorPower, setEquatorPower] = useState(0.85);
-  const [yNoiseScale, setYNoiseScale] = useState(0.4);
-  const [cylinderMorph, setCylinderMorph] = useState(0.25);
+  const noiseAmount = 0.3;
+  const displaceYScale = 0.0;
+  const poleNoiseFloor = 0.0;
+  const equatorPower = 0.85;
+  const yNoiseScale = 0.4;
+  const cylinderMorph = 0.25;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -54,56 +82,6 @@ export const ThreeJsUniverse = () => {
   }, []);
 
   const activeView = VIEWS[activeViewIndex];
-  const noiseControls = [
-    {
-      label: "Noise",
-      value: noiseAmount,
-      min: 0,
-      max: 0.6,
-      step: 0.01,
-      onChange: setNoiseAmount,
-    },
-    {
-      label: "Y Displace",
-      value: displaceYScale,
-      min: 0,
-      max: 1,
-      step: 0.01,
-      onChange: setDisplaceYScale,
-    },
-    {
-      label: "Pole Floor",
-      value: poleNoiseFloor,
-      min: 0,
-      max: 0.8,
-      step: 0.01,
-      onChange: setPoleNoiseFloor,
-    },
-    {
-      label: "Equator Power",
-      value: equatorPower,
-      min: 0.5,
-      max: 3,
-      step: 0.05,
-      onChange: setEquatorPower,
-    },
-    {
-      label: "Noise Y Scale",
-      value: yNoiseScale,
-      min: 0.1,
-      max: 1.5,
-      step: 0.05,
-      onChange: setYNoiseScale,
-    },
-    {
-      label: "Sphere → Cylinder",
-      value: cylinderMorph,
-      min: 0,
-      max: 1,
-      step: 0.01,
-      onChange: setCylinderMorph,
-    },
-  ];
 
   return (
     <>
@@ -143,14 +121,7 @@ export const ThreeJsUniverse = () => {
             cylinderMorph={cylinderMorph}
           />
         </Detailed>
-        <Stars
-          radius={50}
-          depth={500}
-          count={2000}
-          factor={5}
-          saturation={1}
-          speed={1}
-        />
+        <RotatingStars />
 
         <EffectComposer>
           <Bloom
@@ -179,28 +150,6 @@ export const ThreeJsUniverse = () => {
           {`${activeView.label}`}
         </div>
       )}
-      {/* <div className="universe-controls">
-        {noiseControls.map((control) => (
-          <label className="universe-control" key={control.label}>
-            <span className="universe-control__label">
-              <span>{control.label}</span>
-              <span className="universe-control__value">
-                {control.value.toFixed(2)}
-              </span>
-            </span>
-            <input
-              type="range"
-              min={control.min}
-              max={control.max}
-              step={control.step}
-              value={control.value}
-              onChange={(event) =>
-                control.onChange(parseFloat(event.target.value))
-              }
-            />
-          </label>
-        ))}
-      </div> */}
       <Loader />
     </>
   );

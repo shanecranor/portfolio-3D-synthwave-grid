@@ -4,13 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import {
+  DEFAULT_UNIVERSE_ANCHOR_Y,
+  DEFAULT_UNIVERSE_ANCHOR_Z,
+  DEFAULT_UNIVERSE_X_OFFSET,
+} from "@/components/3D/universeLayout";
 
 type UniverseComputerProps = {
   viewIndex: number;
   modelIndex: number;
-  angleOffset?: number;
-  radialOffset?: number;
-  xOffset?: number;
   targetSize?: number;
 };
 
@@ -163,12 +165,8 @@ function WireframeComputerModel({
 export function UniverseComputer({
   viewIndex,
   modelIndex,
-  angleOffset = -0.2,
-  radialOffset = 0.1,
-  xOffset = -0.2,
   targetSize = 3.6,
 }: UniverseComputerProps) {
-  const camera = useThree((state) => state.camera);
   const viewportWidth = useThree((state) => state.viewport.width);
   const rootRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
@@ -200,22 +198,14 @@ export function UniverseComputer({
     root.visible = isDefaultView;
     if (!isDefaultView) return;
 
-    const camPos = camera.position;
-    const orbitAngle = Math.atan2(camPos.z, camPos.y) + angleOffset;
-    const orbitRadius = Math.hypot(camPos.y, camPos.z) + radialOffset;
-
     root.position.set(
-      camPos.x + xOffset * responsiveScale,
-      Math.cos(orbitAngle) * orbitRadius,
-      Math.sin(orbitAngle) * orbitRadius,
+      DEFAULT_UNIVERSE_X_OFFSET * responsiveScale,
+      DEFAULT_UNIVERSE_ANCHOR_Y,
+      DEFAULT_UNIVERSE_ANCHOR_Z,
     );
 
     const spin = 1 - Math.exp(-3 * delta);
-    root.rotation.x = THREE.MathUtils.lerp(
-      root.rotation.x,
-      orbitAngle + 0.2,
-      spin,
-    );
+    root.rotation.x = THREE.MathUtils.lerp(root.rotation.x, 0, spin);
     root.rotation.y += delta * 0.35;
     root.rotation.z = THREE.MathUtils.lerp(
       root.rotation.z,
