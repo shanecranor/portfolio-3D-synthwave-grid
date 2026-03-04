@@ -39,6 +39,9 @@ type AnchoredPlacementConfig = {
   rotationX?: number;
   rotationY?: number;
   rotationZ?: number;
+  spinX?: number;
+  spinY?: number;
+  spinZ?: number;
 };
 
 type UniverseAnchoredObjectProps = {
@@ -69,6 +72,8 @@ const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   rotationX: 0.1,
   rotationY: 0.55,
   rotationZ: -0.05,
+  spinY: 0.3,
+  spinZ: 0.0,
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
@@ -76,17 +81,20 @@ const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
   yOffset: 1.15,
   zOffset: -1.15,
   rotationX: 0.5,
-  rotationY: -Math.PI/2,
+  rotationY: -Math.PI / 2,
   rotationZ: 0,
+  spinY: 0.1,
 };
 
 const BASS_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: 2.8,
   yOffset: 1.15,
   zOffset: -1.35,
-  rotationX: Math.PI/2,
-  rotationY: Math.PI-0.2,
+  rotationX: Math.PI / 2,
+  rotationY: Math.PI - 0.2,
   rotationZ: 0,
+  spinY: 0,
+  spinZ: -0.4,
 };
 
 function stepDampedSpring(
@@ -256,22 +264,23 @@ function UniverseAnchoredObject({
     return getUniverseTitleAnchorX(viewportWidth);
   }, [viewportWidth]);
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     const root = rootRef.current;
     if (!root) return;
 
     root.visible = isDefaultView;
     if (!isDefaultView) return;
 
+    const elapsed = clock.getElapsedTime();
     root.position.set(
       titleAnchorX + placement.xOffset,
       DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
       DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
     );
     root.rotation.set(
-      placement.rotationX ?? 0,
-      placement.rotationY ?? 0,
-      placement.rotationZ ?? 0,
+      (placement.rotationX ?? 0) + elapsed * (placement.spinX ?? 0),
+      (placement.rotationY ?? 0) + elapsed * (placement.spinY ?? 0),
+      (placement.rotationZ ?? 0) + elapsed * (placement.spinZ ?? 0),
     );
 
     const targetObjectScale = isActivelyHovered ? hoverScale : 1;
@@ -322,7 +331,7 @@ export function UniverseReflexCamera({
     >
       <WireframeModel
         path={REFLEX_CAMERA_MODEL_PATH}
-        targetSize={3.5}
+        targetSize={2.5}
         fillColor={CAMERA_FILL_COLOR}
         wireframeColor={CAMERA_WIREFRAME_COLOR}
       />
