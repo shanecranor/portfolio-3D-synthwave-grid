@@ -15,7 +15,12 @@ import { Detailed, Loader, Stars } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
-import { UniverseComputer } from "@/components/3D/UniverseComputer";
+import {
+  UniverseBass,
+  UniverseComputer,
+  UniversePlaceholderCube,
+  UNIVERSE_COMPUTER_MODEL_COUNT,
+} from "@/components/3D/UniverseComputer";
 
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
@@ -74,7 +79,9 @@ export const ThreeJsUniverse = () => {
       }
       if (event.code === "KeyC") {
         event.preventDefault();
-        setActiveComputerIndex((current) => (current + 1) % 3);
+        setActiveComputerIndex(
+          (current) => (current + 1) % UNIVERSE_COMPUTER_MODEL_COUNT,
+        );
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -89,10 +96,12 @@ export const ThreeJsUniverse = () => {
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
         <UniverseTitle viewIndex={activeViewIndex} />
+        <UniversePlaceholderCube viewIndex={activeViewIndex} />
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}
         />
+        <UniverseBass viewIndex={activeViewIndex} />
         <Detailed distances={[3, 25]}>
           <NoisySphere
             radius={10}

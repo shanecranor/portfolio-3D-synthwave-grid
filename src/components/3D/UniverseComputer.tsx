@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import {
   DEFAULT_UNIVERSE_ANCHOR_Y,
   DEFAULT_UNIVERSE_ANCHOR_Z,
-  DEFAULT_UNIVERSE_X_OFFSET,
+  getUniverseTitleAnchorX,
 } from "@/components/3D/universeLayout";
 
 type UniverseComputerProps = {
@@ -16,20 +16,77 @@ type UniverseComputerProps = {
   targetSize?: number;
 };
 
-const COMPUTER_MODELS = [
-  "/assets/computer/old_computer/scene.gltf",
-] as const;
+type UniverseBassProps = {
+  viewIndex: number;
+};
 
-// const COMPUTER_MODELS = [
-//   // "/assets/bass/electrical_bass_guitar/scene.gltf",
-//   // "/assets/bass/low_poly_bass_guitar/scene.gltf", 
-//   "/assets/bass/low_polygons_shihos_bass/scene.gltf",
-// ];
+type UniversePlaceholderCubeProps = {
+  viewIndex: number;
+};
+
+type WireframeModelConfig = {
+  path: string;
+  targetSize: number;
+  fillColor?: THREE.ColorRepresentation;
+  wireframeColor?: THREE.ColorRepresentation;
+  wireframeOpacity?: number;
+};
+
+type AnchoredPlacementConfig = {
+  xOffset: number;
+  yOffset: number;
+  zOffset: number;
+  rotationX?: number;
+  rotationY?: number;
+  rotationZ?: number;
+};
+
+type UniverseAnchoredObjectProps = {
+  viewIndex: number;
+  placement: AnchoredPlacementConfig;
+  hoverScale?: number;
+  children: ReactNode;
+};
+
+const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
+const BASS_MODEL_PATH = "/assets/bass/low_polygons_shihos_bass/scene.gltf";
+export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
 
 const BLACK_FILL_COLOR = new THREE.Color(0x000000);
-const WIREFRAME_COLOR = new THREE.Color(0x66ff99);
+const GREEN_WIREFRAME_COLOR = new THREE.Color(0x66ff99);
+const BLUE_WIREFRAME_COLOR = new THREE.Color("#46b8ff").multiplyScalar(1.35);
+const BASS_FILL_COLOR = new THREE.Color("#040814");
+const CUBE_FILL_COLOR = new THREE.Color("#050505");
+const CUBE_WIREFRAME_COLOR = new THREE.Color("#ff8c42");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
+
+const PLACEHOLDER_CUBE_PLACEMENT: AnchoredPlacementConfig = {
+  xOffset: -2.75,
+  yOffset: 1.15,
+  zOffset: -1.3,
+  rotationX: 0.18,
+  rotationY: -0.35,
+  rotationZ: -0.08,
+};
+
+const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
+  xOffset: 0,
+  yOffset: 1.15,
+  zOffset: -1.15,
+  rotationX: 0.5,
+  rotationY: -Math.PI/2,
+  rotationZ: 0,
+};
+
+const BASS_PLACEMENT: AnchoredPlacementConfig = {
+  xOffset: 2.8,
+  yOffset: 1.15,
+  zOffset: -1.35,
+  rotationX: Math.PI/2,
+  rotationY: Math.PI-0.2,
+  rotationZ: 0,
+};
 
 function stepDampedSpring(
   current: number,
@@ -96,15 +153,14 @@ function stepDampedSpring(
   };
 }
 
-function WireframeComputerModel({
+function WireframeModel({
   path,
   targetSize,
-}: {
-  path: (typeof COMPUTER_MODELS)[number];
-  targetSize: number;
-}) {
+  fillColor = BLACK_FILL_COLOR,
+  wireframeColor = GREEN_WIREFRAME_COLOR,
+  wireframeOpacity = 0.95,
+}: WireframeModelConfig) {
   const { scene } = useGLTF(path);
-
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
   const normalizedScale = useMemo(() => {
@@ -119,14 +175,14 @@ function WireframeComputerModel({
 
   useEffect(() => {
     const fillMaterial = new THREE.MeshBasicMaterial({
-      color: BLACK_FILL_COLOR,
+      color: fillColor,
       side: THREE.DoubleSide,
     });
     const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: WIREFRAME_COLOR,
+      color: wireframeColor,
       wireframe: true,
       transparent: true,
-      opacity: 0.95,
+      opacity: wireframeOpacity,
       side: THREE.DoubleSide,
       depthWrite: false,
       polygonOffset: true,
@@ -134,6 +190,7 @@ function WireframeComputerModel({
       polygonOffsetUnits: -1,
     });
     const originalMeshes: THREE.Mesh[] = [];
+    const wireframeOverlays: THREE.Mesh[] = [];
 
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -141,19 +198,23 @@ function WireframeComputerModel({
       }
     });
 
-    for (const mesh of originalMeshes) {
-      mesh.material = fillMaterial;
+    for (const child of originalMeshes) {
+      child.material = fillMaterial;
 
-      const wireframeOverlay = new THREE.Mesh(mesh.geometry, wireframeMaterial);
+      const wireframeOverlay = new THREE.Mesh(child.geometry, wireframeMaterial);
       wireframeOverlay.renderOrder = 1;
-      mesh.add(wireframeOverlay);
+      child.add(wireframeOverlay);
+      wireframeOverlays.push(wireframeOverlay);
     }
 
     return () => {
+      for (const overlay of wireframeOverlays) {
+        overlay.removeFromParent();
+      }
       fillMaterial.dispose();
       wireframeMaterial.dispose();
     };
-  }, [clonedScene]);
+  }, [clonedScene, fillColor, wireframeColor, wireframeOpacity]);
 
   return (
     <Center>
@@ -162,11 +223,31 @@ function WireframeComputerModel({
   );
 }
 
-export function UniverseComputer({
+function WireframePlaceholderCube() {
+  return (
+    <mesh>
+      <boxGeometry args={[1.9, 1.9, 1.9]} />
+      <meshBasicMaterial color={CUBE_FILL_COLOR} />
+      <mesh renderOrder={1}>
+        <boxGeometry args={[1.9, 1.9, 1.9]} />
+        <meshBasicMaterial
+          color={CUBE_WIREFRAME_COLOR}
+          wireframe
+          transparent
+          opacity={0.95}
+          depthWrite={false}
+        />
+      </mesh>
+    </mesh>
+  );
+}
+
+function UniverseAnchoredObject({
   viewIndex,
-  modelIndex,
-  targetSize = 3.6,
-}: UniverseComputerProps) {
+  placement,
+  hoverScale = 1.12,
+  children,
+}: UniverseAnchoredObjectProps) {
   const viewportWidth = useThree((state) => state.viewport.width);
   const rootRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
@@ -175,7 +256,6 @@ export function UniverseComputer({
 
   const isDefaultView = viewIndex === 0;
   const isActivelyHovered = isDefaultView && isHovered;
-  const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
 
   const responsiveScale = useMemo(() => {
     const minWidth = 6;
@@ -190,8 +270,11 @@ export function UniverseComputer({
 
     return THREE.MathUtils.lerp(minScale, maxScale, t);
   }, [viewportWidth]);
+  const titleAnchorX = useMemo(() => {
+    return getUniverseTitleAnchorX(viewportWidth);
+  }, [viewportWidth]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     const root = rootRef.current;
     if (!root) return;
 
@@ -199,25 +282,21 @@ export function UniverseComputer({
     if (!isDefaultView) return;
 
     root.position.set(
-      DEFAULT_UNIVERSE_X_OFFSET * responsiveScale,
-      DEFAULT_UNIVERSE_ANCHOR_Y,
-      DEFAULT_UNIVERSE_ANCHOR_Z,
+      titleAnchorX + placement.xOffset,
+      DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
+      DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
+    );
+    root.rotation.set(
+      placement.rotationX ?? 0,
+      placement.rotationY ?? 0,
+      placement.rotationZ ?? 0,
     );
 
-    const spin = 1 - Math.exp(-3 * delta);
-    root.rotation.x = THREE.MathUtils.lerp(root.rotation.x, 0, spin);
-    root.rotation.y += delta * 0.35;
-    root.rotation.z = THREE.MathUtils.lerp(
-      root.rotation.z,
-      Math.cos(clock.getElapsedTime()) * 0.04,
-      spin,
-    );
-
-    const targetHoverScale = isActivelyHovered ? 1.12 : 1;
+    const targetObjectScale = isActivelyHovered ? hoverScale : 1;
     const hoverSpring = stepDampedSpring(
       hoverScaleRef.current,
       hoverVelocityRef.current,
-      targetHoverScale,
+      targetObjectScale,
       delta,
       HOVER_SPRING_FREQUENCY,
       HOVER_SPRING_DAMPING,
@@ -225,7 +304,6 @@ export function UniverseComputer({
 
     hoverScaleRef.current = hoverSpring.value;
     hoverVelocityRef.current = hoverSpring.velocity;
-
     root.scale.setScalar(responsiveScale * hoverScaleRef.current);
   });
 
@@ -247,11 +325,58 @@ export function UniverseComputer({
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      <WireframeComputerModel path={activeModelPath} targetSize={targetSize} />
+      {children}
     </group>
   );
 }
 
-for (const modelPath of COMPUTER_MODELS) {
+export function UniversePlaceholderCube({
+  viewIndex,
+}: UniversePlaceholderCubeProps) {
+  return (
+    <UniverseAnchoredObject viewIndex={viewIndex} placement={PLACEHOLDER_CUBE_PLACEMENT}>
+      <WireframePlaceholderCube />
+    </UniverseAnchoredObject>
+  );
+}
+
+export function UniverseComputer({
+  viewIndex,
+  modelIndex,
+  targetSize = 3.6,
+}: UniverseComputerProps) {
+  const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
+
+  return (
+    <UniverseAnchoredObject viewIndex={viewIndex} placement={COMPUTER_PLACEMENT}>
+      <WireframeModel
+        path={activeModelPath}
+        targetSize={targetSize}
+        fillColor={BLACK_FILL_COLOR}
+        wireframeColor={GREEN_WIREFRAME_COLOR}
+      />
+    </UniverseAnchoredObject>
+  );
+}
+
+export function UniverseBass({ viewIndex }: UniverseBassProps) {
+  return (
+    <UniverseAnchoredObject
+      viewIndex={viewIndex}
+      placement={BASS_PLACEMENT}
+      hoverScale={1.08}
+    >
+      <WireframeModel
+        path={BASS_MODEL_PATH}
+        targetSize={4.6}
+        fillColor={BASS_FILL_COLOR}
+        wireframeColor={BLUE_WIREFRAME_COLOR}
+        wireframeOpacity={1}
+      />
+    </UniverseAnchoredObject>
+  );
+}
+
+for (const modelPath of [...COMPUTER_MODELS, BASS_MODEL_PATH]) {
   useGLTF.preload(modelPath);
 }

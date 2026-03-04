@@ -12,9 +12,11 @@ import {
   useFont,
 } from "@react-three/drei";
 import {
+  DEFAULT_UNIVERSE_TITLE_SCALE,
   DEFAULT_UNIVERSE_ANCHOR_Y,
   DEFAULT_UNIVERSE_ANCHOR_Z,
-  DEFAULT_UNIVERSE_X_OFFSET,
+  getUniverseTitleAnchorX,
+  getUniverseTitleScale,
 } from "@/components/3D/universeLayout";
 
 extend({ TextGeometry });
@@ -77,7 +79,7 @@ type UniverseTitleProps = {
 
 export const UniverseTitle = ({
   viewIndex,
-  textScale = 0.3,
+  textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
 }: UniverseTitleProps) => {
   const viewportWidth = useThree((state) => state.viewport.width);
   const rootRef = useRef<THREE.Group>(null);
@@ -109,17 +111,10 @@ export const UniverseTitle = ({
 
   const isDefaultView = viewIndex === 0;
   const responsiveTextScale = useMemo(() => {
-    const minWidth = 6;
-    const maxWidth = 24;
-    const minScale = textScale * 0.15;
-    const maxScale = textScale * 0.8;
-    const t = THREE.MathUtils.clamp(
-      (viewportWidth - minWidth) / (maxWidth - minWidth),
-      0,
-      1,
-    );
-
-    return THREE.MathUtils.lerp(minScale, maxScale, t);
+    return getUniverseTitleScale(viewportWidth, textScale);
+  }, [textScale, viewportWidth]);
+  const titleAnchorX = useMemo(() => {
+    return getUniverseTitleAnchorX(viewportWidth, textScale);
   }, [textScale, viewportWidth]);
 
   useFrame(({ clock, pointer }, delta) => {
@@ -159,7 +154,7 @@ export const UniverseTitle = ({
     // end mouse easing
 
     root.position.set(
-      DEFAULT_UNIVERSE_X_OFFSET * responsiveTextScale,
+      titleAnchorX,
       DEFAULT_UNIVERSE_ANCHOR_Y,
       DEFAULT_UNIVERSE_ANCHOR_Z,
     );
