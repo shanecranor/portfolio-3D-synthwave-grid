@@ -22,6 +22,26 @@ import {
   UNIVERSE_COMPUTER_MODEL_COUNT,
 } from "@/components/3D/UniverseComputer";
 
+const CODE_SNIPPETS = [
+  "const signal = await universe.boot({ target: 'shane.cranor.org' });",
+  "camera.position.lerp(desiredPos, 1 - Math.exp(-4 * delta));",
+  "if (hoveredComputer) overlay.tint = '#66ff99';",
+  "glitchBuffer.push(renderFrame({ phosphor: true, bloom: 0.9 }));",
+  `const wireframeMaterial = new THREE.MeshBasicMaterial({
+        color: wireframeColor,
+        wireframe: true,
+        transparent: true,
+        opacity: wireframeOpacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      })`,
+      
+  "requestAnimationFrame(() => stars.rotateY(0.03 * delta));",
+];
+
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
 
@@ -51,6 +71,34 @@ function RotatingStars() {
   );
 }
 
+function CodeSnippetsOverlay({ active }: { active: boolean }) {
+  const snippetNodes = useMemo(() => {
+    return CODE_SNIPPETS.map((snippet, index) => ({
+      id: `${index}-${snippet}`,
+      snippet,
+      style: {
+        left: `${8 + (index % 4) * 22}%`,
+        top: `${12 + index * 10}%`,
+        animationDelay: `${index * 0.35}s`,
+        animationDuration: `${8 + (index % 3) * 2.5}s`,
+      },
+    }));
+  }, []);
+
+  return (
+    <div
+      className={`universe-code-overlay${active ? " is-active" : ""}`}
+      aria-hidden="true"
+    >
+      {snippetNodes.map(({ id, snippet, style }) => (
+        <pre className="universe-code-snippet" key={id} style={style}>
+          {snippet}
+        </pre>
+      ))}
+    </div>
+  );
+}
+
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 0.2;
   const edgeColor = useMemo(
@@ -64,6 +112,7 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
+  const [isComputerHovered, setIsComputerHovered] = useState(false);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -91,7 +140,9 @@ export const ThreeJsUniverse = () => {
   const activeView = VIEWS[activeViewIndex];
 
   return (
-    <>
+    <div
+      className={`universe-shell${isComputerHovered ? " is-computer-hovered" : ""}`}
+    >
       <Canvas camera={{ fov: 75 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
@@ -100,6 +151,7 @@ export const ThreeJsUniverse = () => {
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}
+          onHoverChange={setIsComputerHovered}
         />
         <UniverseBass viewIndex={activeViewIndex} />
         <Detailed distances={[3, 25]}>
@@ -151,6 +203,12 @@ export const ThreeJsUniverse = () => {
         </EffectComposer>
       </Canvas>
 
+      <div
+        className={`universe-phosphor-pass${isComputerHovered ? " is-active" : ""}`}
+        aria-hidden="true"
+      />
+      <CodeSnippetsOverlay active={isComputerHovered} />
+
       {activeView && (
         <div
           className="universe-view-indicator"
@@ -160,6 +218,6 @@ export const ThreeJsUniverse = () => {
         </div>
       )}
       <Loader />
-    </>
+    </div>
   );
 };

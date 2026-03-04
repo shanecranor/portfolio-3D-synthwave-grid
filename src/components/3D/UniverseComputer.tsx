@@ -14,6 +14,7 @@ type UniverseComputerProps = {
   viewIndex: number;
   modelIndex: number;
   targetSize?: number;
+  onHoverChange?: (isHovered: boolean) => void;
 };
 
 type UniverseBassProps = {
@@ -48,6 +49,7 @@ type UniverseAnchoredObjectProps = {
   viewIndex: number;
   placement: AnchoredPlacementConfig;
   hoverScale?: number;
+  onHoverChange?: (isHovered: boolean) => void;
   children: ReactNode;
 };
 
@@ -251,6 +253,7 @@ function UniverseAnchoredObject({
   viewIndex,
   placement,
   hoverScale = 1.12,
+  onHoverChange,
   children,
 }: UniverseAnchoredObjectProps) {
   const viewportWidth = useThree((state) => state.viewport.width);
@@ -262,6 +265,14 @@ function UniverseAnchoredObject({
 
   const isDefaultView = viewIndex === 0;
   const isActivelyHovered = isDefaultView && isHovered;
+
+  useEffect(() => {
+    onHoverChange?.(isActivelyHovered);
+
+    return () => {
+      onHoverChange?.(false);
+    };
+  }, [isActivelyHovered, onHoverChange]);
 
   const responsiveScale = useMemo(() => {
     const minWidth = 6;
@@ -362,11 +373,16 @@ export function UniverseComputer({
   viewIndex,
   modelIndex,
   targetSize = 3.6,
+  onHoverChange,
 }: UniverseComputerProps) {
   const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
 
   return (
-    <UniverseAnchoredObject viewIndex={viewIndex} placement={COMPUTER_PLACEMENT}>
+    <UniverseAnchoredObject
+      viewIndex={viewIndex}
+      placement={COMPUTER_PLACEMENT}
+      onHoverChange={onHoverChange}
+    >
       <WireframeModel
         path={activeModelPath}
         targetSize={targetSize}

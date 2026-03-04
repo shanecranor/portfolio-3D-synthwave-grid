@@ -1,4 +1,9 @@
 .three-js-canvas {
+  --universe-wireframe-green: #66ff99;
+  --universe-wireframe-green-rgb: 102, 255, 173;
+}
+
+.three-js-canvas {
   position: absolute;
   left: 0;
   top: 0;
@@ -14,10 +19,25 @@
   // background: linear-gradient(90deg, rgb(61, 0, 61) 0%, rgb(0, 20, 48) 100%);
 }
 
+.universe-shell {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  transition:
+    filter 280ms ease,
+    opacity 280ms ease;
+}
+
+.universe-shell.is-computer-hovered {
+  // filter: grayscale(1) sepia(1) hue-rotate(36deg) saturate(5.2) brightness(0.88)
+  //   contrast(1.08);
+}
+
 .universe-view-indicator {
   position: absolute;
   top: 1rem;
   left: 1rem;
+  z-index: 4;
   padding: 0.5rem 0.75rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
@@ -27,6 +47,74 @@
   text-transform: uppercase;
   pointer-events: none;
   border-radius: 0.35rem;
+}
+
+.universe-phosphor-pass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(var(--universe-wireframe-green-rgb), 1);
+  mix-blend-mode: color;
+  transition: opacity 280ms ease;
+}
+
+.universe-phosphor-pass.is-active {
+  opacity: 1;
+}
+
+.universe-code-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.universe-code-overlay.is-active {
+  opacity: 1;
+}
+
+.universe-code-snippet {
+  position: absolute;
+  margin: 0;
+  max-width: min(28rem, 62vw);
+  color: rgba(var(--universe-wireframe-green-rgb), 0.84);
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(0.72rem, 0.8vw, 0.95rem);
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  white-space: pre-wrap;
+  text-shadow: 0 0 10px rgba(var(--universe-wireframe-green-rgb), 0.24);
+  opacity: 0;
+  transform: translate3d(-2rem, 0.6rem, 0);
+}
+
+.universe-code-overlay.is-active .universe-code-snippet {
+  animation: universe-code-drift linear infinite;
+}
+
+@keyframes universe-code-drift {
+  0% {
+    opacity: 0;
+    transform: translate3d(-2rem, 0.8rem, 0);
+  }
+
+  15% {
+    opacity: 0.18;
+  }
+
+  45% {
+    opacity: 0.75;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(3rem, -1.2rem, 0);
+  }
 }
 
 .universe-controls {
