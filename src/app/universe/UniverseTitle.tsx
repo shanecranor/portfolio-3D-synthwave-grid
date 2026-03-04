@@ -81,8 +81,9 @@ export const UniverseTitle = ({
   viewIndex,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
 }: UniverseTitleProps) => {
-  const viewportWidth = useThree((state) => state.viewport.width);
+  const browserWidth = useThree((state) => state.size.width);
   const rootRef = useRef<THREE.Group>(null);
+  const centerRef = useRef<THREE.Group>(null);
   const mousePos = useRef(new THREE.Vector2(0, 0));
   const mouseVel = useRef(new THREE.Vector2(0, 0));
   const targetMouse = useRef(new THREE.Vector2(0, 0));
@@ -111,11 +112,11 @@ export const UniverseTitle = ({
 
   const isDefaultView = viewIndex === 0 || true;
   const responsiveTextScale = useMemo(() => {
-    return getUniverseTitleScale(viewportWidth, textScale);
-  }, [textScale, viewportWidth]);
+    return getUniverseTitleScale(browserWidth, textScale);
+  }, [browserWidth, textScale]);
   const titleAnchorX = useMemo(() => {
-    return getUniverseTitleAnchorX(viewportWidth, textScale);
-  }, [textScale, viewportWidth]);
+    return getUniverseTitleAnchorX(browserWidth, textScale);
+  }, [browserWidth, textScale]);
 
   useFrame(({ clock, pointer }, delta) => {
     const root = rootRef.current;
@@ -158,6 +159,7 @@ export const UniverseTitle = ({
       DEFAULT_UNIVERSE_ANCHOR_Y,
       DEFAULT_UNIVERSE_ANCHOR_Z,
     );
+    centerRef.current?.scale.setScalar(responsiveTextScale);
 
     const t = clock.getElapsedTime();
     root.rotation.set(
@@ -169,7 +171,7 @@ export const UniverseTitle = ({
 
   return (
     <group ref={rootRef}>
-      <Center scale={responsiveTextScale}>
+      <Center ref={centerRef}>
         <mesh>
           <textGeometry args={[text, config]} />
           <MeshTransmissionMaterial

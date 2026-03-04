@@ -7,6 +7,7 @@ import * as THREE from "three";
 import {
   DEFAULT_UNIVERSE_ANCHOR_Y,
   DEFAULT_UNIVERSE_ANCHOR_Z,
+  getUniverseResponsiveWidthFactor,
   getUniverseTitleAnchorX,
 } from "@/components/3D/universeLayout";
 
@@ -256,7 +257,6 @@ function UniverseAnchoredObject({
   onHoverChange,
   children,
 }: UniverseAnchoredObjectProps) {
-  const viewportWidth = useThree((state) => state.viewport.width);
   const canvasSize = useThree((state) => state.size);
   const rootRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
@@ -275,24 +275,18 @@ function UniverseAnchoredObject({
   }, [isActivelyHovered, onHoverChange]);
 
   const responsiveScale = useMemo(() => {
-    const minWidth = 6;
-    const maxWidth = 24;
     const minScale = 0.12;
     const maxScale = 0.5;
-    const t = THREE.MathUtils.clamp(
-      (viewportWidth - minWidth) / (maxWidth - minWidth),
-      0,
-      1,
-    );
+    const t = getUniverseResponsiveWidthFactor(canvasSize.width);
 
     return THREE.MathUtils.lerp(minScale, maxScale, t);
-  }, [viewportWidth]);
+  }, [canvasSize.width]);
   const horizontalSpreadScale = useMemo(() => {
     return getHorizontalSpreadScale(canvasSize.width, canvasSize.height);
   }, [canvasSize.height, canvasSize.width]);
   const titleAnchorX = useMemo(() => {
-    return getUniverseTitleAnchorX(viewportWidth);
-  }, [viewportWidth]);
+    return getUniverseTitleAnchorX(canvasSize.width);
+  }, [canvasSize.width]);
 
   useFrame(({ clock }, delta) => {
     const root = rootRef.current;
