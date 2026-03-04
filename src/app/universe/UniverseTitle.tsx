@@ -109,7 +109,7 @@ export const UniverseTitle = ({
     return font.generateShapes(text, config.size);
   }, [font, text, config.size]);
 
-  const isDefaultView = viewIndex === 0;
+  const isDefaultView = viewIndex === 0 || true;
   const responsiveTextScale = useMemo(() => {
     return getUniverseTitleScale(viewportWidth, textScale);
   }, [textScale, viewportWidth]);

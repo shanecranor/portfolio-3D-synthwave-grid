@@ -263,7 +263,7 @@ function UniverseAnchoredObject({
   const hoverVelocityRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  const isDefaultView = viewIndex === 0;
+  const isDefaultView = viewIndex === 0 || true;
   const isActivelyHovered = isDefaultView && isHovered;
 
   useEffect(() => {
