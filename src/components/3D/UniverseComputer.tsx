@@ -64,6 +64,9 @@ const CAMERA_FILL_COLOR = new THREE.Color("#050505");
 const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ff8c42");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
+const DEFAULT_LAYOUT_ASPECT = 16 / 9;
+const MIN_HORIZONTAL_SPREAD = 0.35;
+const MAX_HORIZONTAL_SPREAD = 1;
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.75,
@@ -162,6 +165,18 @@ function stepDampedSpring(
   };
 }
 
+function getHorizontalSpreadScale(width: number, height: number) {
+  if (height <= 0) {
+    return MAX_HORIZONTAL_SPREAD;
+  }
+
+  return THREE.MathUtils.clamp(
+    (width / height) / DEFAULT_LAYOUT_ASPECT,
+    MIN_HORIZONTAL_SPREAD,
+    MAX_HORIZONTAL_SPREAD,
+  );
+}
+
 function WireframeModel({
   path,
   targetSize,
@@ -239,6 +254,7 @@ function UniverseAnchoredObject({
   children,
 }: UniverseAnchoredObjectProps) {
   const viewportWidth = useThree((state) => state.viewport.width);
+  const canvasSize = useThree((state) => state.size);
   const rootRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
   const hoverVelocityRef = useRef(0);
@@ -260,6 +276,9 @@ function UniverseAnchoredObject({
 
     return THREE.MathUtils.lerp(minScale, maxScale, t);
   }, [viewportWidth]);
+  const horizontalSpreadScale = useMemo(() => {
+    return getHorizontalSpreadScale(canvasSize.width, canvasSize.height);
+  }, [canvasSize.height, canvasSize.width]);
   const titleAnchorX = useMemo(() => {
     return getUniverseTitleAnchorX(viewportWidth);
   }, [viewportWidth]);
@@ -273,7 +292,7 @@ function UniverseAnchoredObject({
 
     const elapsed = clock.getElapsedTime();
     root.position.set(
-      titleAnchorX + placement.xOffset,
+      titleAnchorX + placement.xOffset * horizontalSpreadScale,
       DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
       DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
     );
