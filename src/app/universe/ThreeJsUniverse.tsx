@@ -18,7 +18,7 @@ import { UniverseTitle } from "@/app/universe/UniverseTitle";
 import {
   UniverseBass,
   UniverseComputer,
-  UniversePlaceholderCube,
+  UniverseReflexCamera,
   UNIVERSE_COMPUTER_MODEL_COUNT,
 } from "@/components/3D/UniverseComputer";
 
@@ -96,7 +96,7 @@ export const ThreeJsUniverse = () => {
         <color attach="background" args={["black"]} />
         <CameraRig viewIndex={activeViewIndex} />
         <UniverseTitle viewIndex={activeViewIndex} />
-        <UniversePlaceholderCube viewIndex={activeViewIndex} />
+        <UniverseReflexCamera viewIndex={activeViewIndex} />
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}

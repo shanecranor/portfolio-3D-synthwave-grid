@@ -20,7 +20,7 @@ type UniverseBassProps = {
   viewIndex: number;
 };
 
-type UniversePlaceholderCubeProps = {
+type UniverseReflexCameraProps = {
   viewIndex: number;
 };
 
@@ -50,24 +50,25 @@ type UniverseAnchoredObjectProps = {
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
 const BASS_MODEL_PATH = "/assets/bass/low_polygons_shihos_bass/scene.gltf";
+const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/reflex_camera/scene.gltf";
 export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
 
 const BLACK_FILL_COLOR = new THREE.Color(0x000000);
 const GREEN_WIREFRAME_COLOR = new THREE.Color(0x66ff99);
-const BLUE_WIREFRAME_COLOR = new THREE.Color("#46b8ff").multiplyScalar(1.35);
+const BLUE_WIREFRAME_COLOR = new THREE.Color("#00a2ff").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
-const CUBE_FILL_COLOR = new THREE.Color("#050505");
-const CUBE_WIREFRAME_COLOR = new THREE.Color("#ff8c42");
+const CAMERA_FILL_COLOR = new THREE.Color("#050505");
+const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ff8c42");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 
-const PLACEHOLDER_CUBE_PLACEMENT: AnchoredPlacementConfig = {
+const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.75,
   yOffset: 1.15,
   zOffset: -1.3,
-  rotationX: 0.18,
-  rotationY: -0.35,
-  rotationZ: -0.08,
+  rotationX: 0.1,
+  rotationY: 0.55,
+  rotationZ: -0.05,
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
@@ -223,25 +224,6 @@ function WireframeModel({
   );
 }
 
-function WireframePlaceholderCube() {
-  return (
-    <mesh>
-      <boxGeometry args={[1.9, 1.9, 1.9]} />
-      <meshBasicMaterial color={CUBE_FILL_COLOR} />
-      <mesh renderOrder={1}>
-        <boxGeometry args={[1.9, 1.9, 1.9]} />
-        <meshBasicMaterial
-          color={CUBE_WIREFRAME_COLOR}
-          wireframe
-          transparent
-          opacity={0.95}
-          depthWrite={false}
-        />
-      </mesh>
-    </mesh>
-  );
-}
-
 function UniverseAnchoredObject({
   viewIndex,
   placement,
@@ -330,12 +312,20 @@ function UniverseAnchoredObject({
   );
 }
 
-export function UniversePlaceholderCube({
+export function UniverseReflexCamera({
   viewIndex,
-}: UniversePlaceholderCubeProps) {
+}: UniverseReflexCameraProps) {
   return (
-    <UniverseAnchoredObject viewIndex={viewIndex} placement={PLACEHOLDER_CUBE_PLACEMENT}>
-      <WireframePlaceholderCube />
+    <UniverseAnchoredObject
+      viewIndex={viewIndex}
+      placement={REFLEX_CAMERA_PLACEMENT}
+    >
+      <WireframeModel
+        path={REFLEX_CAMERA_MODEL_PATH}
+        targetSize={3.5}
+        fillColor={CAMERA_FILL_COLOR}
+        wireframeColor={CAMERA_WIREFRAME_COLOR}
+      />
     </UniverseAnchoredObject>
   );
 }
@@ -377,6 +367,10 @@ export function UniverseBass({ viewIndex }: UniverseBassProps) {
   );
 }
 
-for (const modelPath of [...COMPUTER_MODELS, BASS_MODEL_PATH]) {
+for (const modelPath of [
+  ...COMPUTER_MODELS,
+  BASS_MODEL_PATH,
+  REFLEX_CAMERA_MODEL_PATH,
+]) {
   useGLTF.preload(modelPath);
 }
