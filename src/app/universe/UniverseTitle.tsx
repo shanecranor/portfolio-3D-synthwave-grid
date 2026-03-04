@@ -27,6 +27,11 @@ declare module "@react-three/fiber" {
   }
 }
 
+const UNIVERSE_TITLE_COLOR = "#ffffff";
+const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [0, 0.8, 2] as const;
+const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = [0.1, 0.1, 0.1] as const;
+const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [0, 0.4, 1] as const;
+
 const AnimatedDashLine = ({
   shape,
   color,
@@ -184,7 +189,7 @@ export const UniverseTitle = ({
             iridescenceIOR={1.4}
             chromaticAberration={1}
             anisotropy={1}
-            color="#ffffff"
+            color={UNIVERSE_TITLE_COLOR}
             transmission={1}
             emissive={[0, 0, 0]}
           />
@@ -196,7 +201,7 @@ export const UniverseTitle = ({
             <group key={shapeIndex}>
               <AnimatedDashLine
                 shape={shape}
-                color={[0, 2, 2]}
+                color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                 thickness={2}
                 speed={0.1}
                 gapSize={0}
@@ -205,7 +210,7 @@ export const UniverseTitle = ({
                 <AnimatedDashLine
                   key={holeIndex}
                   shape={hole}
-                  color={[0, 2, 2]}
+                  color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                   thickness={2}
                   speed={0.1}
                   gapSize={0}
@@ -219,7 +224,7 @@ export const UniverseTitle = ({
             <group key={shapeIndex}>
               <AnimatedDashLine
                 shape={shape}
-                color={[0.1, 0.1, 0.1]}
+                color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
                 thickness={0.2}
                 gapSize={0}
               />
@@ -227,7 +232,7 @@ export const UniverseTitle = ({
                 <AnimatedDashLine
                   key={holeIndex}
                   shape={hole}
-                  color={[0.1, 0.1, 0.1]}
+                  color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
                   thickness={0.2}
                   gapSize={0}
                 />
@@ -240,7 +245,7 @@ export const UniverseTitle = ({
             <group key={shapeIndex}>
               <AnimatedDashLine
                 shape={shape}
-                color={[0, 1, 1]}
+                color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
                 thickness={1}
                 speed={0.05}
                 dashSize={0.3}
@@ -250,7 +255,7 @@ export const UniverseTitle = ({
                 <AnimatedDashLine
                   key={holeIndex}
                   shape={hole}
-                  color={[0, 1, 1]}
+                  color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
                   thickness={1}
                   speed={0.5}
                   dashSize={1}
