@@ -3,6 +3,34 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { simplexNoise3D } from "./simplex";
 
+const HALO_VERTEX_SHADER = `
+varying vec3 vWorldPosition;
+varying vec3 vWorldNormal;
+
+void main() {
+  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+  vWorldPosition = worldPosition.xyz;
+  vWorldNormal = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}
+`;
+
+const HALO_FRAGMENT_SHADER = `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform float uPower;
+varying vec3 vWorldPosition;
+varying vec3 vWorldNormal;
+
+void main() {
+  vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+  float ndv = abs(dot(normalize(vWorldNormal), viewDir));
+  float falloff = pow(ndv, uPower);
+  float alpha = falloff * uOpacity;
+  gl_FragColor = vec4(uColor, alpha);
+}
+`;
+
 function simplexNoise3DFractal(
   x: number,
   y: number,
@@ -64,8 +92,7 @@ function addNoiseToSphere(
         baseVertex.y * yNoiseScale,
         baseVertex.z,
         4,
-      ) *
-      noiseAmount;
+      ) * noiseAmount;
 
     // Reduce noise near the poles, keep more around the equator (x/z-heavy).
     noise *= axisWeight;
@@ -143,6 +170,10 @@ type NoisySphereProps = {
   noiseAmount?: number;
   rotation?: [number, number, number];
   edgeColor?: THREE.Color;
+  glowColor?: THREE.Color;
+  glowSpread?: number;
+  glowOpacity?: number;
+  glowPower?: number;
   edgeThreshold?: number;
   edgeLineWidth?: number;
   flatCenter?: boolean;
@@ -160,6 +191,10 @@ export function NoisySphere({
   noiseAmount = 0.08,
   rotation = [0, 0, Math.PI / 2],
   edgeColor,
+  glowColor,
+  glowSpread = 0.7,
+  glowOpacity = 0.14,
+  glowPower = 2.1,
   flatCenter = true,
   poleNoiseFloor = 0.25,
   equatorPower = 1.5,
@@ -169,8 +204,15 @@ export function NoisySphere({
 }: NoisySphereProps) {
   const groupRef = useRef<THREE.Group>(null);
 
-  const { sphereGeometry, wireframeGeometry } = useMemo(() => {
+  const { sphereGeometry, wireframeGeometry, glowGeometry } = useMemo(() => {
     const geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
+    const glowWidthSegments = 32;
+    const glowHeightSegments = 16;
+    const glowGeo = new THREE.SphereGeometry(
+      radius * 2,
+      glowWidthSegments,
+      glowHeightSegments,
+    );
     addNoiseToSphere(
       geo,
       noiseAmount,
@@ -182,7 +224,11 @@ export function NoisySphere({
       cylinderMorph,
     );
     const wireframe = createSphereWireframe(geo, widthSegments, heightSegments);
-    return { sphereGeometry: geo, wireframeGeometry: wireframe };
+    return {
+      sphereGeometry: geo,
+      wireframeGeometry: wireframe,
+      glowGeometry: glowGeo,
+    };
   }, [
     radius,
     widthSegments,
@@ -201,6 +247,7 @@ export function NoisySphere({
       groupRef.current.rotation.x = clock.elapsedTime * 0.03;
     }
   });
+  const glowScale = 1 + Math.max(0.02, glowSpread);
 
   return (
     <group ref={groupRef} rotation={rotation}>
@@ -211,6 +258,24 @@ export function NoisySphere({
         <lineSegments geometry={wireframeGeometry}>
           <lineBasicMaterial color={edgeColor} />
         </lineSegments>
+      )}
+      {glowColor && (
+        <mesh geometry={glowGeometry} scale={[glowScale, glowScale, glowScale]}>
+          <shaderMaterial
+            transparent
+            blending={THREE.AdditiveBlending}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+            toneMapped={false}
+            vertexShader={HALO_VERTEX_SHADER}
+            fragmentShader={HALO_FRAGMENT_SHADER}
+            uniforms={{
+              uColor: { value: glowColor },
+              uOpacity: { value: glowOpacity },
+              uPower: { value: glowPower },
+            }}
+          />
+        </mesh>
       )}
     </group>
   );

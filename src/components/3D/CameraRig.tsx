@@ -27,9 +27,13 @@ export const VIEWS: ViewConfig[] = [
 
 type CameraRigProps = {
   viewIndex: number;
+  manualControlEnabled?: boolean;
 };
 
-export function CameraRig({ viewIndex }: CameraRigProps) {
+export function CameraRig({
+  viewIndex,
+  manualControlEnabled = false,
+}: CameraRigProps) {
   const camera = useThree((state) => state.camera);
   const initializedRef = useRef(false);
   const currentTargetRef = useRef(new THREE.Vector3());
@@ -52,8 +56,29 @@ export function CameraRig({ viewIndex }: CameraRigProps) {
     }
   }, [camera, view]);
 
+  useEffect(() => {
+    if (!view || !manualControlEnabled) return;
+
+    desiredPos.set(...view.position);
+    desiredTarget.set(...view.target);
+
+    if (view.surfaceUp) {
+      desiredUp.copy(desiredPos).normalize();
+    } else if (view.up) {
+      desiredUp.set(...view.up);
+    } else {
+      desiredUp.set(0, 1, 0);
+    }
+
+    camera.position.copy(desiredPos);
+    currentTargetRef.current.copy(desiredTarget);
+    currentUpRef.current.copy(desiredUp).normalize();
+    camera.up.copy(currentUpRef.current);
+    camera.lookAt(currentTargetRef.current);
+  }, [camera, view, manualControlEnabled, desiredPos, desiredTarget, desiredUp]);
+
   useFrame((_, delta) => {
-    if (!view) return;
+    if (!view || manualControlEnabled) return;
 
     desiredPos.set(...view.position);
     desiredTarget.set(...view.target);

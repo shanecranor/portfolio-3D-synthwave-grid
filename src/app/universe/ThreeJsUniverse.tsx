@@ -11,7 +11,7 @@ import {
 } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
-import { Detailed, Loader, Stars } from "@react-three/drei";
+import { Detailed, Loader, Stars, TrackballControls } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
@@ -99,15 +99,21 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
   );
 }
 const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
+const SPHERE_GLOW_COLOR = [69, 49, 99];
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 2.3;
   const edgeColor = useMemo(
     () => new THREE.Color(...EDGE_COLOR.map((c) => (c / 255) * edgeBrightness)),
     [],
   );
+  const sphereGlowColor = useMemo(
+    () => new THREE.Color(...SPHERE_GLOW_COLOR.map((c) => c / 255)),
+    [],
+  );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
   const [isComputerHovered, setIsComputerHovered] = useState(false);
+  const [isGlowVisible, setIsGlowVisible] = useState(true);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -127,12 +133,17 @@ export const ThreeJsUniverse = () => {
           (current) => (current + 1) % UNIVERSE_COMPUTER_MODEL_COUNT,
         );
       }
+      if (event.code === "KeyG") {
+        event.preventDefault();
+        setIsGlowVisible((current) => !current);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const activeView = VIEWS[activeViewIndex];
+  const isTrackballView = activeViewIndex === 2;
 
   return (
     <div
@@ -140,7 +151,18 @@ export const ThreeJsUniverse = () => {
     >
       <Canvas camera={{ fov: 75 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
         <color attach="background" args={["black"]} />
-        <CameraRig viewIndex={activeViewIndex} />
+        <CameraRig
+          viewIndex={activeViewIndex}
+          manualControlEnabled={isTrackballView}
+        />
+        {isTrackballView && (
+          <TrackballControls
+            rotateSpeed={2.5}
+            zoomSpeed={1.2}
+            panSpeed={0.8}
+            dynamicDampingFactor={0.15}
+          />
+        )}
         <UniverseTitle viewIndex={activeViewIndex} />
         <UniverseReflexCamera viewIndex={activeViewIndex} />
         <UniverseComputer
@@ -156,6 +178,10 @@ export const ThreeJsUniverse = () => {
             heightSegments={70}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
+            glowColor={isGlowVisible ? sphereGlowColor : undefined}
+            glowSpread={isGlowVisible ? 0.85 : undefined}
+            glowOpacity={isGlowVisible ? 0.16 : undefined}
+            glowPower={isGlowVisible ? 2.35 : undefined}
             flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
@@ -169,6 +195,10 @@ export const ThreeJsUniverse = () => {
             heightSegments={32}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
+            glowColor={isGlowVisible ? sphereGlowColor : undefined}
+            glowSpread={isGlowVisible ? 0.85 : undefined}
+            glowOpacity={isGlowVisible ? 0.16 : undefined}
+            glowPower={isGlowVisible ? 2.35 : undefined}
             flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
