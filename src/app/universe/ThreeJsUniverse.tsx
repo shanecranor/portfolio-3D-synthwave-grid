@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { BlendFunction } from "postprocessing";
 import { Detailed, Loader, Stars, TrackballControls } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
+import { GlowSphere } from "@/components/3D/GlowSphere";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
 import {
@@ -99,7 +100,7 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
   );
 }
 const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
-const SPHERE_GLOW_COLOR = [69, 49, 99];
+const SPHERE_GLOW_COLOR = [255, 0, 0]; //[69, 49, 99];
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 2.3;
   const edgeColor = useMemo(
@@ -178,10 +179,6 @@ export const ThreeJsUniverse = () => {
             heightSegments={70}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
-            glowColor={isGlowVisible ? sphereGlowColor : undefined}
-            glowSpread={isGlowVisible ? 0.85 : undefined}
-            glowOpacity={isGlowVisible ? 0.16 : undefined}
-            glowPower={isGlowVisible ? 2.35 : undefined}
             flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
@@ -195,10 +192,6 @@ export const ThreeJsUniverse = () => {
             heightSegments={32}
             noiseAmount={noiseAmount}
             edgeColor={edgeColor}
-            glowColor={isGlowVisible ? sphereGlowColor : undefined}
-            glowSpread={isGlowVisible ? 0.85 : undefined}
-            glowOpacity={isGlowVisible ? 0.16 : undefined}
-            glowPower={isGlowVisible ? 2.35 : undefined}
             flatCenter={true}
             poleNoiseFloor={poleNoiseFloor}
             equatorPower={equatorPower}
@@ -207,6 +200,7 @@ export const ThreeJsUniverse = () => {
             cylinderMorph={cylinderMorph}
           />
         </Detailed>
+        <GlowSphere radius={10} glowColor={isGlowVisible ? sphereGlowColor : undefined} />
         <RotatingStars />
 
         <EffectComposer>

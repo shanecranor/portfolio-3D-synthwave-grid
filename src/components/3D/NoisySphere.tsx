@@ -3,51 +3,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { simplexNoise3D } from "./simplex";
 
-const HALO_VERTEX_SHADER = `
-varying vec3 vWorldPosition;
-varying vec3 vWorldNormal;
-varying vec3 vWorldCenter;
-
-void main() {
-  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = worldPosition.xyz;
-  vWorldNormal = normalize(mat3(modelMatrix) * normal);
-  vWorldCenter = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-  gl_Position = projectionMatrix * viewMatrix * worldPosition;
-}
-`;
-
-const HALO_FRAGMENT_SHADER = `
-uniform vec3 uColor;
-uniform float uOpacity;
-uniform float uPower;
-uniform float uRadius;
-uniform float uBoundarySoftness;
-varying vec3 vWorldPosition;
-varying vec3 vWorldNormal;
-varying vec3 vWorldCenter;
-
-void main() {
-  vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-  float faceSign = gl_FrontFacing ? 1.0 : -1.0;
-  vec3 orientedNormal = normalize(vWorldNormal) * faceSign;
-  float ndv = max(dot(orientedNormal, viewDir), 0.0);
-
-  float camDistToCenter = distance(cameraPosition, vWorldCenter);
-  float insideBlend = smoothstep(
-    -uBoundarySoftness,
-    uBoundarySoftness,
-    uRadius - camDistToCenter
-  );
-  float frontMask = gl_FrontFacing ? 1.0 : 0.0;
-  float sideMask = mix(frontMask, 1.0 - frontMask, insideBlend);
-
-  float falloff = pow(ndv, uPower);
-  float alpha = falloff * sideMask * uOpacity;
-  gl_FragColor = vec4(uColor, alpha);
-}
-`;
-
 function simplexNoise3DFractal(
   x: number,
   y: number,
@@ -187,10 +142,6 @@ type NoisySphereProps = {
   noiseAmount?: number;
   rotation?: [number, number, number];
   edgeColor?: THREE.Color;
-  glowColor?: THREE.Color;
-  glowSpread?: number;
-  glowOpacity?: number;
-  glowPower?: number;
   edgeThreshold?: number;
   edgeLineWidth?: number;
   flatCenter?: boolean;
@@ -208,10 +159,6 @@ export function NoisySphere({
   noiseAmount = 0.08,
   rotation = [0, 0, Math.PI / 2],
   edgeColor,
-  glowColor,
-  glowSpread = 0.7,
-  glowOpacity = 0.14,
-  glowPower = 2.1,
   flatCenter = true,
   poleNoiseFloor = 0.25,
   equatorPower = 1.5,
@@ -221,15 +168,8 @@ export function NoisySphere({
 }: NoisySphereProps) {
   const groupRef = useRef<THREE.Group>(null);
 
-  const { sphereGeometry, wireframeGeometry, glowGeometry } = useMemo(() => {
+  const { sphereGeometry, wireframeGeometry } = useMemo(() => {
     const geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
-    const glowWidthSegments = 32;
-    const glowHeightSegments = 16;
-    const glowGeo = new THREE.SphereGeometry(
-      radius * 2,
-      glowWidthSegments,
-      glowHeightSegments,
-    );
     addNoiseToSphere(
       geo,
       noiseAmount,
@@ -244,7 +184,6 @@ export function NoisySphere({
     return {
       sphereGeometry: geo,
       wireframeGeometry: wireframe,
-      glowGeometry: glowGeo,
     };
   }, [
     radius,
@@ -264,9 +203,6 @@ export function NoisySphere({
       groupRef.current.rotation.x = clock.elapsedTime * 0.03;
     }
   });
-  const glowScale = 1 + Math.max(0.02, glowSpread);
-  const glowRadius = radius * 2 * glowScale;
-  const glowBoundarySoftness = Math.max(0.05, glowRadius * 0.015);
 
   return (
     <group ref={groupRef} rotation={rotation}>
@@ -277,26 +213,6 @@ export function NoisySphere({
         <lineSegments geometry={wireframeGeometry}>
           <lineBasicMaterial color={edgeColor} />
         </lineSegments>
-      )}
-      {glowColor && (
-        <mesh geometry={glowGeometry} scale={[glowScale, glowScale, glowScale]}>
-          <shaderMaterial
-            transparent
-            blending={THREE.AdditiveBlending}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-            toneMapped={false}
-            vertexShader={HALO_VERTEX_SHADER}
-            fragmentShader={HALO_FRAGMENT_SHADER}
-            uniforms={{
-              uColor: { value: glowColor },
-              uOpacity: { value: glowOpacity },
-              uPower: { value: glowPower },
-              uRadius: { value: glowRadius },
-              uBoundarySoftness: { value: glowBoundarySoftness },
-            }}
-          />
-        </mesh>
       )}
     </group>
   );
