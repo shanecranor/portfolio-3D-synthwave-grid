@@ -38,7 +38,7 @@ const CODE_SNIPPETS = [
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
       })`,
-      
+
   "requestAnimationFrame(() => stars.rotateY(0.03 * delta));",
 ];
 
@@ -98,16 +98,11 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
     </div>
   );
 }
-
+const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
 export const ThreeJsUniverse = () => {
-  const edgeBrightness = 0.2;
+  const edgeBrightness = 2.3;
   const edgeColor = useMemo(
-    () =>
-      new THREE.Color(
-        10 * edgeBrightness,
-        1.2 * edgeBrightness,
-        7 * edgeBrightness,
-      ),
+    () => new THREE.Color(...EDGE_COLOR.map((c) => (c / 255) * edgeBrightness)),
     [],
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);

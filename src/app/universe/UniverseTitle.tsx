@@ -28,9 +28,9 @@ declare module "@react-three/fiber" {
 }
 
 const UNIVERSE_TITLE_COLOR = "#ffffff";
-const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [0, 0.8, 2] as const;
+const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [88, 94, 195].map((c) => c / 255);
 const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = [0.1, 0.1, 0.1] as const;
-const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [0, 0.4, 1] as const;
+const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [88, 94, 195].map((c) => c / 255);
 
 const AnimatedDashLine = ({
   shape,
