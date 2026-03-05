@@ -6,11 +6,13 @@ import { simplexNoise3D } from "./simplex";
 const HALO_VERTEX_SHADER = `
 varying vec3 vWorldPosition;
 varying vec3 vWorldNormal;
+varying vec3 vWorldCenter;
 
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   vWorldPosition = worldPosition.xyz;
   vWorldNormal = normalize(mat3(modelMatrix) * normal);
+  vWorldCenter = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   gl_Position = projectionMatrix * viewMatrix * worldPosition;
 }
 `;
@@ -19,14 +21,29 @@ const HALO_FRAGMENT_SHADER = `
 uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uPower;
+uniform float uRadius;
+uniform float uBoundarySoftness;
 varying vec3 vWorldPosition;
 varying vec3 vWorldNormal;
+varying vec3 vWorldCenter;
 
 void main() {
   vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-  float ndv = abs(dot(normalize(vWorldNormal), viewDir));
+  float faceSign = gl_FrontFacing ? 1.0 : -1.0;
+  vec3 orientedNormal = normalize(vWorldNormal) * faceSign;
+  float ndv = max(dot(orientedNormal, viewDir), 0.0);
+
+  float camDistToCenter = distance(cameraPosition, vWorldCenter);
+  float insideBlend = smoothstep(
+    -uBoundarySoftness,
+    uBoundarySoftness,
+    uRadius - camDistToCenter
+  );
+  float frontMask = gl_FrontFacing ? 1.0 : 0.0;
+  float sideMask = mix(frontMask, 1.0 - frontMask, insideBlend);
+
   float falloff = pow(ndv, uPower);
-  float alpha = falloff * uOpacity;
+  float alpha = falloff * sideMask * uOpacity;
   gl_FragColor = vec4(uColor, alpha);
 }
 `;
@@ -248,6 +265,8 @@ export function NoisySphere({
     }
   });
   const glowScale = 1 + Math.max(0.02, glowSpread);
+  const glowRadius = radius * 2 * glowScale;
+  const glowBoundarySoftness = Math.max(0.05, glowRadius * 0.015);
 
   return (
     <group ref={groupRef} rotation={rotation}>
@@ -273,6 +292,8 @@ export function NoisySphere({
               uColor: { value: glowColor },
               uOpacity: { value: glowOpacity },
               uPower: { value: glowPower },
+              uRadius: { value: glowRadius },
+              uBoundarySoftness: { value: glowBoundarySoftness },
             }}
           />
         </mesh>
