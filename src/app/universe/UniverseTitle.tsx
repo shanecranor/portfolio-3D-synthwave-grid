@@ -41,6 +41,7 @@ const AnimatedDashLine = ({
   gapSize = 0.1,
 }) => {
   const lineRef = useRef<Line2 | null>(null);
+  const isDashed = gapSize > 0 && dashSize > 0;
   const { linePoints, totalLineLength } = useMemo(() => {
     // add z coord to 2D points to make them 3D
     const _points = shape.getPoints().map((p) => [p.x, p.y, 0]);
@@ -56,12 +57,25 @@ const AnimatedDashLine = ({
   }, [shape]);
 
   useFrame((state, delta) => {
+    if (!isDashed) return;
+
     const material = lineRef.current?.material as LineMaterial | undefined;
     if (!material) return;
 
     // move the dash offset continuously to animate
     material.dashOffset -= delta * speed * 10;
   });
+
+  if (!isDashed) {
+    return (
+      <Line
+        ref={lineRef}
+        points={linePoints}
+        color={color}
+        lineWidth={thickness}
+      />
+    );
+  }
 
   return (
     <Line
