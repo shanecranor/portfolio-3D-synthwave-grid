@@ -76,7 +76,7 @@ export function GlowSphere({
 }: GlowSphereProps) {
   const groupRef = useRef<THREE.Group>(null);
   const glowGeometry = useMemo(() => {
-    return new THREE.SphereGeometry(radius * 2, widthSegments, heightSegments);
+    return new THREE.SphereGeometry(radius, widthSegments, heightSegments);
   }, [radius, widthSegments, heightSegments]);
 
   useFrame(({ clock }) => {

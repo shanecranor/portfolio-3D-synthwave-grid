@@ -56,7 +56,9 @@ type UniverseAnchoredObjectProps = {
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
 const BASS_MODEL_PATH = "/assets/bass/low_polygons_shihos_bass/scene.gltf";
-const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/reflex_camera/scene.gltf";
+// const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/ae1/scene.gltf";
+const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/sa3/scene.gltf";
+
 export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
 
 const BLACK_FILL_COLOR = new THREE.Color(0x000000);
@@ -64,7 +66,7 @@ const GREEN_WIREFRAME_COLOR = new THREE.Color(0x66ff99);
 const BLUE_WIREFRAME_COLOR = new THREE.Color("#00a2ff").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
-const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ff8c42");
+const CAMERA_WIREFRAME_COLOR = new THREE.Color("#f1b634");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
@@ -75,11 +77,11 @@ const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.75,
   yOffset: 1.15,
   zOffset: -1.3,
-  rotationX: 0.1,
-  rotationY: 0.55,
-  rotationZ: -0.05,
+  rotationX: 0.8,
+  rotationY: -1.5,
+  rotationZ: 0,
   spinY: 0.3,
-  spinZ: 0.0,
+  spinZ: 0.1,
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
@@ -174,7 +176,7 @@ function getHorizontalSpreadScale(width: number, height: number) {
   }
 
   return THREE.MathUtils.clamp(
-    (width / height) / DEFAULT_LAYOUT_ASPECT,
+    width / height / DEFAULT_LAYOUT_ASPECT,
     MIN_HORIZONTAL_SPREAD,
     MAX_HORIZONTAL_SPREAD,
   );
@@ -228,7 +230,10 @@ function WireframeModel({
     for (const child of originalMeshes) {
       child.material = fillMaterial;
 
-      const wireframeOverlay = new THREE.Mesh(child.geometry, wireframeMaterial);
+      const wireframeOverlay = new THREE.Mesh(
+        child.geometry,
+        wireframeMaterial,
+      );
       wireframeOverlay.renderOrder = 1;
       child.add(wireframeOverlay);
       wireframeOverlays.push(wireframeOverlay);
@@ -345,9 +350,7 @@ function UniverseAnchoredObject({
   );
 }
 
-export function UniverseReflexCamera({
-  viewIndex,
-}: UniverseReflexCameraProps) {
+export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
   return (
     <UniverseAnchoredObject
       viewIndex={viewIndex}
