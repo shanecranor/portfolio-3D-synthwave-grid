@@ -272,9 +272,10 @@ function WireframeModel({
       HOVER_SPRING_DAMPING,
     );
 
-    opacityRef.current = opacitySpring.value;
+    const nextOpacity = Math.max(wireframeOpacity, opacitySpring.value);
+    opacityRef.current = nextOpacity;
     opacityVelocityRef.current = opacitySpring.velocity;
-    wireframeMaterial.opacity = opacitySpring.value;
+    wireframeMaterial.opacity = nextOpacity;
   });
 
   return (
