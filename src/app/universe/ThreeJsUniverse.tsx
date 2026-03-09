@@ -146,12 +146,17 @@ export const ThreeJsUniverse = () => {
 
   const activeView = VIEWS[activeViewIndex];
   const isTrackballView = activeViewIndex === 2;
+  const initialView = VIEWS[0];
 
   return (
     <div
       className={`universe-shell${isComputerHovered ? " is-computer-hovered" : ""}`}
     >
-      <Canvas camera={{ fov: 75 }} dpr={[1 / 2, 1]} gl={{ alpha: false }}>
+      <Canvas
+        camera={{ fov: 75, position: initialView.position }}
+        dpr={[1 / 2, 1]}
+        gl={{ alpha: false }}
+      >
         <color attach="background" args={["black"]} />
         <CameraRig
           viewIndex={activeViewIndex}

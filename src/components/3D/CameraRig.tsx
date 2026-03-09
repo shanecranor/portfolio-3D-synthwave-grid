@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -44,17 +44,26 @@ export function CameraRig({
 
   const view = VIEWS[viewIndex];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!view) return;
 
     if (!initializedRef.current) {
+      if (view.surfaceUp) {
+        desiredUp.set(...view.position).normalize();
+      } else if (view.up) {
+        desiredUp.set(...view.up);
+      } else {
+        desiredUp.set(0, 1, 0);
+      }
+
       camera.position.set(...view.position);
       currentTargetRef.current.set(...view.target);
-      camera.up.set(0, 1, 0);
+      currentUpRef.current.copy(desiredUp).normalize();
+      camera.up.copy(currentUpRef.current);
       camera.lookAt(currentTargetRef.current);
       initializedRef.current = true;
     }
-  }, [camera, view]);
+  }, [camera, view, desiredUp]);
 
   useEffect(() => {
     if (!view || !manualControlEnabled) return;
