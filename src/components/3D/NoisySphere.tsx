@@ -210,7 +210,7 @@ export function NoisySphere({
       <mesh
         geometry={sphereGeometry}
         // scale={[0.998, 0.998, 0.998]}
-        scale={0.99}
+        scale={0.999}
       >
         <meshBasicMaterial color={[0.02, 0, 0.01]} />
         {/* <MeshTransmissionMaterial
