@@ -64,11 +64,12 @@ const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/sa3/scene.gltf";
 export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
 
 const BLACK_FILL_COLOR = new THREE.Color(0x000000);
-const GREEN_WIREFRAME_COLOR = new THREE.Color(0x66ff99);
-const BLUE_WIREFRAME_COLOR = new THREE.Color("#00a2ff").multiplyScalar(1.35);
+// const GREEN_WIREFRAME_COLOR = new THREE.Color("#66ff99");
+const GREEN_WIREFRAME_COLOR = new THREE.Color("#73d1ad");
+const BLUE_WIREFRAME_COLOR = new THREE.Color("#3694cb").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
-const CAMERA_WIREFRAME_COLOR = new THREE.Color("#f1b634");
+const CAMERA_WIREFRAME_COLOR = new THREE.Color("#bc984a");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
@@ -420,7 +421,7 @@ export function UniverseComputer({
           targetSize={targetSize}
           fillColor={BLACK_FILL_COLOR}
           wireframeColor={GREEN_WIREFRAME_COLOR}
-          wireframeOpacity={0.08}
+          wireframeOpacity={0.12}
           isHovered={isHovered}
         />
       )}
