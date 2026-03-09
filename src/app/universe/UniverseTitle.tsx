@@ -28,6 +28,9 @@ const TITLE_HITBOX_PADDING_Y = 0.8;
 const TITLE_HITBOX_PADDING_Z = 0.8;
 const TITLE_MATERIAL_FADE_SPEED = 10;
 const TITLE_MATERIAL_FADE_EPSILON = 0.01;
+const TITLE_POINTER_SPEED_MIN = 120;
+const TITLE_POINTER_SPEED_MAX = 1600;
+const TITLE_POINTER_STRENGTH_DECAY_SPEED = 2.5;
 
 const AnimatedDashLine = ({
   shape,
@@ -92,7 +95,12 @@ export const UniverseTitle = ({
   const transmissionFadeRef = useRef(0);
   const transmissionMaterialRef = useRef<THREE.Material | null>(null);
   const showTransmissionMaterialRef = useRef(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const pointerMotionStrengthRef = useRef(0);
+  const lastPointerSampleRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+  } | null>(null);
   const [isPrimaryLineAnimationActive, setIsPrimaryLineAnimationActive] =
     useState(false);
   const [showTransmissionMaterial, setShowTransmissionMaterial] =
@@ -197,7 +205,15 @@ export const UniverseTitle = ({
       Math.cos(t) * 0.005,
     );
 
-    const targetFade = isHovered ? 1 : 0;
+    const strengthDecayEase =
+      1 - Math.exp(-TITLE_POINTER_STRENGTH_DECAY_SPEED * delta);
+    pointerMotionStrengthRef.current = THREE.MathUtils.lerp(
+      pointerMotionStrengthRef.current,
+      0,
+      strengthDecayEase,
+    );
+
+    const targetFade = pointerMotionStrengthRef.current;
     const fadeEase = 1 - Math.exp(-TITLE_MATERIAL_FADE_SPEED * delta);
     const nextFade = THREE.MathUtils.lerp(
       transmissionFadeRef.current,
@@ -231,7 +247,41 @@ export const UniverseTitle = ({
   });
 
   useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const lastSample = lastPointerSampleRef.current;
+      const nextSample = {
+        x: event.clientX,
+        y: event.clientY,
+        time: event.timeStamp,
+      };
+
+      if (lastSample) {
+        const deltaTimeMs = Math.max(1, nextSample.time - lastSample.time);
+        const distance = Math.hypot(
+          nextSample.x - lastSample.x,
+          nextSample.y - lastSample.y,
+        );
+        const speed = (distance / deltaTimeMs) * 1000;
+        const normalizedStrength = THREE.MathUtils.clamp(
+          (speed - TITLE_POINTER_SPEED_MIN) /
+            (TITLE_POINTER_SPEED_MAX - TITLE_POINTER_SPEED_MIN),
+          0,
+          1,
+        );
+
+        pointerMotionStrengthRef.current = Math.max(
+          pointerMotionStrengthRef.current,
+          normalizedStrength,
+        );
+      }
+
+      lastPointerSampleRef.current = nextSample;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+
     return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
       textGeometry.dispose();
       hitboxGeometry.dispose();
     };
@@ -268,14 +318,6 @@ export const UniverseTitle = ({
         <mesh
           geometry={hitboxGeometry}
           position={hitboxPosition}
-          onPointerOver={(event) => {
-            event.stopPropagation();
-            setIsHovered(true);
-          }}
-          onPointerOut={(event) => {
-            event.stopPropagation();
-            setIsHovered(false);
-          }}
           onClick={(event) => {
             event.stopPropagation();
             setIsPrimaryLineAnimationActive((current) => !current);
