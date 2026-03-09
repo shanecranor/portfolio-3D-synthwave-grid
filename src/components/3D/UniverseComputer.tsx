@@ -69,7 +69,7 @@ const GREEN_WIREFRAME_COLOR = new THREE.Color("#73d1ad");
 const BLUE_WIREFRAME_COLOR = new THREE.Color("#3694cb").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
-const CAMERA_WIREFRAME_COLOR = new THREE.Color("#bc984a");
+const CAMERA_WIREFRAME_COLOR = new THREE.Color("#a86b48");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
@@ -393,7 +393,7 @@ export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
           targetSize={2.5}
           fillColor={CAMERA_FILL_COLOR}
           wireframeColor={CAMERA_WIREFRAME_COLOR}
-          wireframeOpacity={0.05}
+          wireframeOpacity={0.08}
           isHovered={isHovered}
         />
       )}
