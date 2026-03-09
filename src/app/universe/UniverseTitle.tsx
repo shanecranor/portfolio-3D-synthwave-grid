@@ -93,6 +93,8 @@ export const UniverseTitle = ({
   const transmissionMaterialRef = useRef<THREE.Material | null>(null);
   const showTransmissionMaterialRef = useRef(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isPrimaryLineAnimationActive, setIsPrimaryLineAnimationActive] =
+    useState(false);
   const [showTransmissionMaterial, setShowTransmissionMaterial] =
     useState(false);
   const font = useFont("/AAReg.json");
@@ -274,11 +276,16 @@ export const UniverseTitle = ({
             event.stopPropagation();
             setIsHovered(false);
           }}
+          onClick={(event) => {
+            event.stopPropagation();
+            setIsPrimaryLineAnimationActive((current) => !current);
+          }}
         >
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
 
         {/* animated outlines */}
+        {/* MAIN THICK LINES */}
         <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
@@ -287,7 +294,7 @@ export const UniverseTitle = ({
                 color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                 thickness={2}
                 speed={0.1}
-                gapSize={0}
+                gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
               />
               {shape.holes.map((hole, holeIndex) => (
                 <AnimatedDashLine
@@ -296,19 +303,20 @@ export const UniverseTitle = ({
                   color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                   thickness={2}
                   speed={0.1}
-                  gapSize={0}
+                  gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
                 />
               ))}
             </group>
           ))}
         </group>
+        {/* SECONDARY ALWAYS ON LINES */}
         <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
               <AnimatedDashLine
                 shape={shape}
                 color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
-                thickness={0.2}
+                thickness={0.4}
                 gapSize={0}
               />
               {shape.holes.map((hole, holeIndex) => (
@@ -316,13 +324,14 @@ export const UniverseTitle = ({
                   key={holeIndex}
                   shape={hole}
                   color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
-                  thickness={0.2}
+                  thickness={0.4}
                   gapSize={0}
                 />
               ))}
             </group>
           ))}
         </group>
+        {/* REAR LINES */}
         <group position={[0, 0, -1 * (config.bevelThickness + 0.01)]}>
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
