@@ -72,7 +72,7 @@ export function GlowSphere({
   glowColor,
   glowSpread = 3.7,
   glowOpacity = 0.14,
-  glowPower = 30.0,
+  glowPower = 80.0,
   glowEdgePower = 100.0,
 }: GlowSphereProps) {
   const groupRef = useRef<THREE.Group>(null);
