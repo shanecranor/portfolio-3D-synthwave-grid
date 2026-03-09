@@ -361,6 +361,7 @@ export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
         targetSize={2.5}
         fillColor={CAMERA_FILL_COLOR}
         wireframeColor={CAMERA_WIREFRAME_COLOR}
+        wireframeOpacity={0.05}
       />
     </UniverseAnchoredObject>
   );
@@ -385,6 +386,7 @@ export function UniverseComputer({
         targetSize={targetSize}
         fillColor={BLACK_FILL_COLOR}
         wireframeColor={GREEN_WIREFRAME_COLOR}
+        wireframeOpacity={0.08}
       />
     </UniverseAnchoredObject>
   );
@@ -402,7 +404,7 @@ export function UniverseBass({ viewIndex }: UniverseBassProps) {
         targetSize={4.6}
         fillColor={BASS_FILL_COLOR}
         wireframeColor={BLUE_WIREFRAME_COLOR}
-        wireframeOpacity={1}
+        wireframeOpacity={0.12}
       />
     </UniverseAnchoredObject>
   );
