@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { simplexNoise3D } from "./simplex";
+import { MeshTransmissionMaterial } from "@react-three/drei";
 
 function simplexNoise3DFractal(
   x: number,
@@ -206,8 +207,26 @@ export function NoisySphere({
 
   return (
     <group ref={groupRef} rotation={rotation}>
-      <mesh geometry={sphereGeometry} scale={[0.99, 0.99, 0.99]}>
-        <meshBasicMaterial color={[0, 0, 0]} />
+      <mesh
+        geometry={sphereGeometry}
+        // scale={[0.998, 0.998, 0.998]}
+        scale={0.99}
+      >
+        <meshBasicMaterial color={[0.02, 0, 0.01]} />
+        {/* <MeshTransmissionMaterial
+          backside
+          samples={4}
+          resolution={256}
+          thickness={0.05}
+          roughness={0.1}
+          iridescence={1}
+          iridescenceIOR={1.4}
+          chromaticAberration={1}
+          anisotropy={1}
+          color={[0.2, 0.2, 0.2]}
+          transmission={0.3}
+          emissive={[0, 0, 0]}
+        /> */}
       </mesh>
       {edgeColor && (
         <lineSegments geometry={wireframeGeometry}>

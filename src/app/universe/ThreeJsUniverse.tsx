@@ -102,61 +102,6 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
 const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
 const SPHERE_GLOW_COLOR = [69, 49, 99];
 
-type GlowTuningState = {
-  glowOpacity: number;
-  glowPower: number;
-  glowEdgePower: number;
-  fogStrength: number;
-  fogScale: number;
-  fogSpeed: number;
-  fogContrast: number;
-  fogBrightness: number;
-};
-
-const DEFAULT_GLOW_SETTINGS: GlowTuningState = {
-  glowOpacity: 0.22,
-  glowPower: 30,
-  glowEdgePower: 100,
-  fogStrength: 0.62,
-  fogScale: 1.8,
-  fogSpeed: 0.018,
-  fogContrast: 1.8,
-  fogBrightness: 1.0,
-};
-
-function SliderControl({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="universe-control">
-      <span className="universe-control__label">
-        <span>{label}</span>
-        <span className="universe-control__value">{value.toFixed(3)}</span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-    </label>
-  );
-}
-
 export const ThreeJsUniverse = () => {
   const edgeBrightness = 2.3;
   const edgeColor = useMemo(
@@ -171,21 +116,12 @@ export const ThreeJsUniverse = () => {
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
   const [isComputerHovered, setIsComputerHovered] = useState(false);
   const [isGlowVisible, setIsGlowVisible] = useState(true);
-  const [glowSettings, setGlowSettings] =
-    useState<GlowTuningState>(DEFAULT_GLOW_SETTINGS);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
   const equatorPower = 0.85;
   const yNoiseScale = 0.4;
   const cylinderMorph = 0.25;
-
-  const setGlowSetting = (key: keyof GlowTuningState, value: number) => {
-    setGlowSettings((current) => ({
-      ...current,
-      [key]: value,
-    }));
-  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -268,14 +204,6 @@ export const ThreeJsUniverse = () => {
         <GlowSphere
           radius={10}
           glowColor={isGlowVisible ? sphereGlowColor : undefined}
-          glowOpacity={glowSettings.glowOpacity}
-          glowPower={glowSettings.glowPower}
-          glowEdgePower={glowSettings.glowEdgePower}
-          fogStrength={glowSettings.fogStrength}
-          fogScale={glowSettings.fogScale}
-          fogSpeed={glowSettings.fogSpeed}
-          fogContrast={glowSettings.fogContrast}
-          fogBrightness={glowSettings.fogBrightness}
         />
         <RotatingStars />
 
@@ -312,89 +240,6 @@ export const ThreeJsUniverse = () => {
           {`${activeView.label}`}
         </div>
       )}
-      <div className="universe-controls">
-        <div className="universe-controls__header">
-          <span className="universe-controls__title">Glow Fog</span>
-          <button
-            type="button"
-            className="universe-controls__button"
-            onClick={() => setGlowSettings(DEFAULT_GLOW_SETTINGS)}
-          >
-            Reset
-          </button>
-        </div>
-        <button
-          type="button"
-          className="universe-controls__button universe-controls__button--toggle"
-          onClick={() => setIsGlowVisible((current) => !current)}
-        >
-          Glow {isGlowVisible ? "On" : "Off"}
-        </button>
-        <SliderControl
-          label="Opacity"
-          value={glowSettings.glowOpacity}
-          min={0}
-          max={0.5}
-          step={0.005}
-          onChange={(value) => setGlowSetting("glowOpacity", value)}
-        />
-        <SliderControl
-          label="Fog Strength"
-          value={glowSettings.fogStrength}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={(value) => setGlowSetting("fogStrength", value)}
-        />
-        <SliderControl
-          label="Fog Scale"
-          value={glowSettings.fogScale}
-          min={0.2}
-          max={4}
-          step={0.05}
-          onChange={(value) => setGlowSetting("fogScale", value)}
-        />
-        <SliderControl
-          label="Fog Speed"
-          value={glowSettings.fogSpeed}
-          min={0}
-          max={0.12}
-          step={0.002}
-          onChange={(value) => setGlowSetting("fogSpeed", value)}
-        />
-        <SliderControl
-          label="Fog Contrast"
-          value={glowSettings.fogContrast}
-          min={0.5}
-          max={4}
-          step={0.05}
-          onChange={(value) => setGlowSetting("fogContrast", value)}
-        />
-        <SliderControl
-          label="Fog Brightness"
-          value={glowSettings.fogBrightness}
-          min={0.25}
-          max={3}
-          step={0.05}
-          onChange={(value) => setGlowSetting("fogBrightness", value)}
-        />
-        <SliderControl
-          label="Glow Power"
-          value={glowSettings.glowPower}
-          min={1}
-          max={80}
-          step={1}
-          onChange={(value) => setGlowSetting("glowPower", value)}
-        />
-        <SliderControl
-          label="Edge Power"
-          value={glowSettings.glowEdgePower}
-          min={1}
-          max={180}
-          step={1}
-          onChange={(value) => setGlowSetting("glowEdgePower", value)}
-        />
-      </div>
       <Loader />
     </div>
   );
