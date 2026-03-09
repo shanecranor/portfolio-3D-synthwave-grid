@@ -1,8 +1,8 @@
 "use client";
 
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
-import { useFrame, extend, useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 import type { Line2, LineMaterial } from "three-stdlib";
 import {
@@ -19,18 +19,15 @@ import {
   getUniverseTitleScale,
 } from "@/components/3D/universeLayout";
 
-extend({ TextGeometry });
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    textGeometry: any;
-  }
-}
-
 const UNIVERSE_TITLE_COLOR = "#ffffff";
 const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [88, 94, 195].map((c) => c / 100);
 const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = [0.1, 0.1, 0.1] as const;
 const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [88, 94, 195].map((c) => c / 100);
+const TITLE_HITBOX_PADDING_X = 0.8;
+const TITLE_HITBOX_PADDING_Y = 0.8;
+const TITLE_HITBOX_PADDING_Z = 0.8;
+const TITLE_MATERIAL_FADE_SPEED = 10;
+const TITLE_MATERIAL_FADE_EPSILON = 0.01;
 
 const AnimatedDashLine = ({
   shape,
@@ -92,6 +89,12 @@ export const UniverseTitle = ({
   const mousePos = useRef(new THREE.Vector2(0, 0));
   const mouseVel = useRef(new THREE.Vector2(0, 0));
   const targetMouse = useRef(new THREE.Vector2(0, 0));
+  const transmissionFadeRef = useRef(0);
+  const transmissionMaterialRef = useRef<THREE.Material | null>(null);
+  const showTransmissionMaterialRef = useRef(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showTransmissionMaterial, setShowTransmissionMaterial] =
+    useState(false);
   const font = useFont("/AAReg.json");
 
   const text = "Shane Cranor";
@@ -114,6 +117,25 @@ export const UniverseTitle = ({
   const shapes = useMemo(() => {
     return font.generateShapes(text, config.size);
   }, [font, text, config.size]);
+  const { textGeometry, hitboxGeometry, hitboxPosition } = useMemo(() => {
+    const geometry = new TextGeometry(text, config);
+    geometry.computeBoundingBox();
+
+    const bounds = geometry.boundingBox ?? new THREE.Box3();
+    const size = bounds.getSize(new THREE.Vector3());
+    const center = bounds.getCenter(new THREE.Vector3());
+    const hoverGeometry = new THREE.BoxGeometry(
+      size.x + TITLE_HITBOX_PADDING_X,
+      size.y + TITLE_HITBOX_PADDING_Y,
+      size.z + TITLE_HITBOX_PADDING_Z,
+    );
+
+    return {
+      textGeometry: geometry,
+      hitboxGeometry: hoverGeometry,
+      hitboxPosition: center.toArray() as [number, number, number],
+    };
+  }, [config, text]);
 
   const isDefaultView = viewIndex === 0 || true;
   const responsiveTextScale = useMemo(() => {
@@ -172,27 +194,88 @@ export const UniverseTitle = ({
       Math.sin(t) * 0.005 + easedX * 0.08,
       Math.cos(t) * 0.005,
     );
+
+    const targetFade = isHovered ? 1 : 0;
+    const fadeEase = 1 - Math.exp(-TITLE_MATERIAL_FADE_SPEED * delta);
+    const nextFade = THREE.MathUtils.lerp(
+      transmissionFadeRef.current,
+      targetFade,
+      fadeEase,
+    );
+    transmissionFadeRef.current = nextFade;
+
+    const transmissionMaterial = transmissionMaterialRef.current as
+      | (THREE.Material & { opacity?: number; transmission?: number })
+      | null;
+
+    if (transmissionMaterial) {
+      transmissionMaterial.opacity = nextFade;
+      transmissionMaterial.transmission = nextFade;
+    }
+
+    if (targetFade > 0 && !showTransmissionMaterialRef.current) {
+      showTransmissionMaterialRef.current = true;
+      setShowTransmissionMaterial(true);
+    }
+
+    if (
+      targetFade === 0 &&
+      showTransmissionMaterialRef.current &&
+      nextFade <= TITLE_MATERIAL_FADE_EPSILON
+    ) {
+      showTransmissionMaterialRef.current = false;
+      setShowTransmissionMaterial(false);
+    }
   });
+
+  useEffect(() => {
+    return () => {
+      textGeometry.dispose();
+      hitboxGeometry.dispose();
+    };
+  }, [hitboxGeometry, textGeometry]);
 
   return (
     <group ref={rootRef}>
       <Center ref={centerRef}>
-        <mesh>
-          <textGeometry args={[text, config]} />
-          <MeshTransmissionMaterial
-            backside
-            samples={4}
-            resolution={256}
-            thickness={0.5}
-            roughness={0.2}
-            iridescence={50}
-            iridescenceIOR={1.4}
-            chromaticAberration={1}
-            anisotropy={1}
-            color={UNIVERSE_TITLE_COLOR}
-            transmission={1}
-            emissive={[0, 0, 0]}
-          />
+        <mesh geometry={textGeometry}>
+          <meshBasicMaterial color="black" />
+        </mesh>
+        {showTransmissionMaterial && (
+          <mesh geometry={textGeometry} renderOrder={1}>
+            <MeshTransmissionMaterial
+              ref={transmissionMaterialRef}
+              backside
+              transparent
+              samples={4}
+              resolution={256}
+              thickness={0.5}
+              roughness={0.2}
+              iridescence={50}
+              iridescenceIOR={1.4}
+              chromaticAberration={1}
+              anisotropy={1}
+              color={UNIVERSE_TITLE_COLOR}
+              transmission={1}
+              opacity={0}
+              depthWrite={false}
+              emissive={[0, 0, 0]}
+            />
+          </mesh>
+        )}
+        <mesh
+          geometry={hitboxGeometry}
+          position={hitboxPosition}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            setIsHovered(true);
+          }}
+          onPointerOut={(event) => {
+            event.stopPropagation();
+            setIsHovered(false);
+          }}
+        >
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
 
         {/* animated outlines */}
