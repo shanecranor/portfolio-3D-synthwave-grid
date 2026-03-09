@@ -32,6 +32,8 @@ type WireframeModelConfig = {
   fillColor?: THREE.ColorRepresentation;
   wireframeColor?: THREE.ColorRepresentation;
   wireframeOpacity?: number;
+  isHovered?: boolean;
+  hoverWireframeOpacityMultiplier?: number;
 };
 
 type AnchoredPlacementConfig = {
@@ -51,7 +53,7 @@ type UniverseAnchoredObjectProps = {
   placement: AnchoredPlacementConfig;
   hoverScale?: number;
   onHoverChange?: (isHovered: boolean) => void;
-  children: ReactNode;
+  children: (state: { isHovered: boolean }) => ReactNode;
 };
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
@@ -188,9 +190,14 @@ function WireframeModel({
   fillColor = BLACK_FILL_COLOR,
   wireframeColor = GREEN_WIREFRAME_COLOR,
   wireframeOpacity = 0.95,
+  isHovered = false,
+  hoverWireframeOpacityMultiplier = 5,
 }: WireframeModelConfig) {
   const { scene } = useGLTF(path);
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
+  const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const opacityRef = useRef(wireframeOpacity);
+  const opacityVelocityRef = useRef(0);
 
   const normalizedScale = useMemo(() => {
     clonedScene.updateMatrixWorld(true);
@@ -218,6 +225,7 @@ function WireframeModel({
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
     });
+    wireframeMaterialRef.current = wireframeMaterial;
     const originalMeshes: THREE.Mesh[] = [];
     const wireframeOverlays: THREE.Mesh[] = [];
 
@@ -243,10 +251,31 @@ function WireframeModel({
       for (const overlay of wireframeOverlays) {
         overlay.removeFromParent();
       }
+      wireframeMaterialRef.current = null;
       fillMaterial.dispose();
       wireframeMaterial.dispose();
     };
   }, [clonedScene, fillColor, wireframeColor, wireframeOpacity]);
+
+  useFrame((_, delta) => {
+    const wireframeMaterial = wireframeMaterialRef.current;
+    if (!wireframeMaterial) return;
+
+    const targetOpacity =
+      wireframeOpacity * (isHovered ? hoverWireframeOpacityMultiplier : 1);
+    const opacitySpring = stepDampedSpring(
+      opacityRef.current,
+      opacityVelocityRef.current,
+      targetOpacity,
+      delta,
+      HOVER_SPRING_FREQUENCY,
+      HOVER_SPRING_DAMPING,
+    );
+
+    opacityRef.current = opacitySpring.value;
+    opacityVelocityRef.current = opacitySpring.velocity;
+    wireframeMaterial.opacity = opacitySpring.value;
+  });
 
   return (
     <Center>
@@ -345,7 +374,7 @@ function UniverseAnchoredObject({
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      {children}
+      {children({ isHovered: isActivelyHovered })}
     </group>
   );
 }
@@ -356,13 +385,16 @@ export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
       viewIndex={viewIndex}
       placement={REFLEX_CAMERA_PLACEMENT}
     >
-      <WireframeModel
-        path={REFLEX_CAMERA_MODEL_PATH}
-        targetSize={2.5}
-        fillColor={CAMERA_FILL_COLOR}
-        wireframeColor={CAMERA_WIREFRAME_COLOR}
-        wireframeOpacity={0.05}
-      />
+      {({ isHovered }) => (
+        <WireframeModel
+          path={REFLEX_CAMERA_MODEL_PATH}
+          targetSize={2.5}
+          fillColor={CAMERA_FILL_COLOR}
+          wireframeColor={CAMERA_WIREFRAME_COLOR}
+          wireframeOpacity={0.05}
+          isHovered={isHovered}
+        />
+      )}
     </UniverseAnchoredObject>
   );
 }
@@ -381,13 +413,16 @@ export function UniverseComputer({
       placement={COMPUTER_PLACEMENT}
       onHoverChange={onHoverChange}
     >
-      <WireframeModel
-        path={activeModelPath}
-        targetSize={targetSize}
-        fillColor={BLACK_FILL_COLOR}
-        wireframeColor={GREEN_WIREFRAME_COLOR}
-        wireframeOpacity={0.08}
-      />
+      {({ isHovered }) => (
+        <WireframeModel
+          path={activeModelPath}
+          targetSize={targetSize}
+          fillColor={BLACK_FILL_COLOR}
+          wireframeColor={GREEN_WIREFRAME_COLOR}
+          wireframeOpacity={0.08}
+          isHovered={isHovered}
+        />
+      )}
     </UniverseAnchoredObject>
   );
 }
@@ -399,13 +434,16 @@ export function UniverseBass({ viewIndex }: UniverseBassProps) {
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
     >
-      <WireframeModel
-        path={BASS_MODEL_PATH}
-        targetSize={4.6}
-        fillColor={BASS_FILL_COLOR}
-        wireframeColor={BLUE_WIREFRAME_COLOR}
-        wireframeOpacity={0.12}
-      />
+      {({ isHovered }) => (
+        <WireframeModel
+          path={BASS_MODEL_PATH}
+          targetSize={4.6}
+          fillColor={BASS_FILL_COLOR}
+          wireframeColor={BLUE_WIREFRAME_COLOR}
+          wireframeOpacity={0.12}
+          isHovered={isHovered}
+        />
+      )}
     </UniverseAnchoredObject>
   );
 }
