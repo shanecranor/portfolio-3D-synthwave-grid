@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Center, useGLTF } from "@react-three/drei";
+import { Billboard, Center, Text, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import {
   DEFAULT_UNIVERSE_ANCHOR_Y,
@@ -51,9 +51,19 @@ type AnchoredPlacementConfig = {
 type UniverseAnchoredObjectProps = {
   viewIndex: number;
   placement: AnchoredPlacementConfig;
+  specCard?: HolographicSpecConfig;
   hoverScale?: number;
   onHoverChange?: (isHovered: boolean) => void;
   children: (state: { isHovered: boolean }) => ReactNode;
+};
+
+type HolographicSpecConfig = {
+  category: string;
+  summary: string;
+  accent: string;
+  color: THREE.ColorRepresentation;
+  panelOffset: [number, number, number];
+  panelSize?: [number, number];
 };
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
@@ -70,11 +80,41 @@ const BLUE_WIREFRAME_COLOR = new THREE.Color("#3694cb").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
 const CAMERA_WIREFRAME_COLOR = new THREE.Color("#a86b48");
+const HOLOGRAM_FONT_PATH = "/_astroarmada.ttf";
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const MIN_HORIZONTAL_SPREAD = 0.35;
 const MAX_HORIZONTAL_SPREAD = 1;
+const HOLOGRAM_SCANLINE_COUNT = 6;
+
+const COMPUTER_SPEC_CARD: HolographicSpecConfig = {
+  category: "Creative Dev",
+  summary: "Realtime interfaces, generative systems, and polished web builds.",
+  accent: "WEBGL / UI SYSTEMS",
+  color: GREEN_WIREFRAME_COLOR,
+  panelOffset: [2.65, 1.4, 0.5],
+  panelSize: [3.4, 1.8],
+};
+
+const REFLEX_CAMERA_SPEC_CARD: HolographicSpecConfig = {
+  category: "Photography",
+  summary:
+    "Capturing mundane, beautiful, and captivating moments with interesting gear.",
+  accent: "NIKON Z6 / RAW",
+  color: CAMERA_WIREFRAME_COLOR,
+  panelOffset: [5, -1, 2],
+  panelSize: [4, 1.55],
+};
+
+const BASS_SPEC_CARD: HolographicSpecConfig = {
+  category: "Sound",
+  summary: "Low-end pulse, analog texture, and rhythm-driven scene identity.",
+  accent: "SYNTH / TIMBRE",
+  color: BLUE_WIREFRAME_COLOR,
+  panelOffset: [-3, 1, 0.5],
+  panelSize: [3.1, 1.6],
+};
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.75,
@@ -185,6 +225,415 @@ function getHorizontalSpreadScale(width: number, height: number) {
   );
 }
 
+function createLineSegmentsGeometry(
+  segments: [[number, number, number], [number, number, number]][],
+) {
+  const geometry = new THREE.BufferGeometry();
+  const vectors = segments.flatMap(([start, end]) => {
+    return [new THREE.Vector3(...start), new THREE.Vector3(...end)];
+  });
+
+  geometry.setFromPoints(vectors);
+
+  return geometry;
+}
+
+function createScanlineGeometry(
+  width: number,
+  height: number,
+  count: number,
+  insetX: number,
+) {
+  const lines: number[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const t = (index + 1) / (count + 1);
+    const y = THREE.MathUtils.lerp(height / 2 - 0.12, -height / 2 + 0.12, t);
+
+    lines.push(-width / 2 + insetX, y, 0, width / 2 - insetX, y, 0);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(lines, 3));
+
+  return geometry;
+}
+
+function HolographicSpecCard({
+  config,
+  isVisible,
+}: {
+  config: HolographicSpecConfig;
+  isVisible: boolean;
+}) {
+  const canvasSize = useThree((state) => state.size);
+  const rootRef = useRef<THREE.Group>(null);
+  const backplateMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const plateMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const glowMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const borderMaterialRef = useRef<THREE.LineBasicMaterial | null>(null);
+  const leaderMaterialRef = useRef<THREE.LineBasicMaterial | null>(null);
+  const accentMaterialRef = useRef<THREE.LineBasicMaterial | null>(null);
+  const scanlineMaterialRef = useRef<THREE.LineBasicMaterial | null>(null);
+  const titleTextRef = useRef<{
+    fillOpacity: number;
+    strokeOpacity: number;
+    outlineOpacity: number;
+  } | null>(null);
+  const summaryTextRef = useRef<{
+    fillOpacity: number;
+    strokeOpacity: number;
+    outlineOpacity: number;
+  } | null>(null);
+  const accentTextRef = useRef<{
+    fillOpacity: number;
+    strokeOpacity: number;
+    outlineOpacity: number;
+  } | null>(null);
+  const unfoldRef = useRef(0);
+  const unfoldVelocityRef = useRef(0);
+  const [flickerOffset] = useState(() => Math.random() * Math.PI * 2);
+  const [panelWidth, panelHeight] = config.panelSize ?? [3, 1.65];
+  const responsiveWidthFactor = useMemo(() => {
+    return getUniverseResponsiveWidthFactor(canvasSize.width);
+  }, [canvasSize.width]);
+  const horizontalOffsetScale = useMemo(() => {
+    return THREE.MathUtils.lerp(0.58, 1, responsiveWidthFactor);
+  }, [responsiveWidthFactor]);
+  const verticalOffsetScale = useMemo(() => {
+    return THREE.MathUtils.lerp(0.82, 1, responsiveWidthFactor);
+  }, [responsiveWidthFactor]);
+  const panelDisplayScale = useMemo(() => {
+    return THREE.MathUtils.lerp(0.84, 1, responsiveWidthFactor);
+  }, [responsiveWidthFactor]);
+  const scaledPanelOffset = useMemo(() => {
+    const [x, y, z] = config.panelOffset;
+
+    return [x * horizontalOffsetScale, y * verticalOffsetScale, z] as [
+      number,
+      number,
+      number,
+    ];
+  }, [config.panelOffset, horizontalOffsetScale, verticalOffsetScale]);
+
+  const hologramColor = useMemo(
+    () => new THREE.Color(config.color),
+    [config.color],
+  );
+  const borderColor = useMemo(
+    () => hologramColor.clone().multiplyScalar(1.25),
+    [hologramColor],
+  );
+  const ultraBrightColor = useMemo(
+    () => hologramColor.clone().multiplyScalar(3.5).addScalar(0.3),
+    [hologramColor],
+  );
+  const glowColor = useMemo(
+    () => hologramColor.clone().multiplyScalar(0.8),
+    [hologramColor],
+  );
+  const plateColor = useMemo(
+    () => hologramColor.clone().multiplyScalar(0.18),
+    [hologramColor],
+  );
+
+  const leaderGeometry = useMemo(() => {
+    const [x, y, z] = scaledPanelOffset;
+    const direction = Math.sign(x);
+    const middlePoint: [number, number, number] = [x * 0.38, y * 0.25, z * 0.2];
+    const endPoint: [number, number, number] = [
+      x - direction * (panelWidth * 0.42),
+      y,
+      z,
+    ];
+
+    return createLineSegmentsGeometry([
+      [[0, 0, 0], middlePoint],
+      [middlePoint, endPoint],
+    ]);
+  }, [panelWidth, scaledPanelOffset]);
+
+  const borderGeometry = useMemo(() => {
+    const halfWidth = panelWidth / 2;
+    const halfHeight = panelHeight / 2;
+
+    return createLineSegmentsGeometry([
+      [
+        [-halfWidth, halfHeight, 0],
+        [halfWidth, halfHeight, 0],
+      ],
+      [
+        [halfWidth, halfHeight, 0],
+        [halfWidth, -halfHeight, 0],
+      ],
+      [
+        [halfWidth, -halfHeight, 0],
+        [-halfWidth, -halfHeight, 0],
+      ],
+      [
+        [-halfWidth, -halfHeight, 0],
+        [-halfWidth, halfHeight, 0],
+      ],
+    ]);
+  }, [panelHeight, panelWidth]);
+
+  const accentGeometry = useMemo(() => {
+    const halfWidth = panelWidth / 2;
+    const halfHeight = panelHeight / 2;
+
+    return createLineSegmentsGeometry([
+      [
+        [-halfWidth, halfHeight - 0.18, 0],
+        [-halfWidth + 0.45, halfHeight - 0.18, 0],
+      ],
+      [
+        [-halfWidth + 0.45, halfHeight - 0.18, 0],
+        [-halfWidth + 0.65, halfHeight, 0],
+      ],
+      [
+        [-halfWidth + 0.65, halfHeight, 0],
+        [halfWidth, halfHeight, 0],
+      ],
+    ]);
+  }, [panelHeight, panelWidth]);
+
+  const scanlineGeometry = useMemo(() => {
+    return createScanlineGeometry(
+      panelWidth,
+      panelHeight,
+      HOLOGRAM_SCANLINE_COUNT,
+      0.18,
+    );
+  }, [panelHeight, panelWidth]);
+
+  useEffect(() => {
+    return () => {
+      leaderGeometry.dispose();
+      borderGeometry.dispose();
+      accentGeometry.dispose();
+      scanlineGeometry.dispose();
+    };
+  }, [accentGeometry, borderGeometry, leaderGeometry, scanlineGeometry]);
+
+  useFrame(({ clock }, delta) => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const unfoldSpring = stepDampedSpring(
+      unfoldRef.current,
+      unfoldVelocityRef.current,
+      isVisible ? 1 : 0,
+      delta,
+      HOVER_SPRING_FREQUENCY,
+      0.72,
+    );
+    const unfold = THREE.MathUtils.clamp(unfoldSpring.value, 0, 1);
+    const [x, y, z] = scaledPanelOffset;
+    const direction = Math.sign(x);
+    const easedOpacity = unfold * unfold;
+    const flicker =
+      0.97 +
+      Math.sin(clock.elapsedTime * 16 + flickerOffset) * 0.03 +
+      Math.sin(clock.elapsedTime * 27 + flickerOffset * 0.7) * 0.015;
+    const intensity = easedOpacity * flicker;
+    const scaleX = (0.76 + unfold * 0.24) * panelDisplayScale;
+    const scaleY = (0.9 + unfold * 0.1) * panelDisplayScale;
+
+    unfoldRef.current = unfold;
+    unfoldVelocityRef.current = unfoldSpring.velocity;
+    root.visible = unfold > 0.02;
+    root.position.set(
+      THREE.MathUtils.lerp(x, x - direction * 0.24, unfold),
+      y - (1 - unfold) * 0.08,
+      z,
+    );
+    root.scale.set(scaleX, scaleY, 1);
+
+    if (backplateMaterialRef.current) {
+      backplateMaterialRef.current.opacity = 0.54 * easedOpacity;
+    }
+
+    if (plateMaterialRef.current) {
+      plateMaterialRef.current.opacity = 0.26 * intensity;
+    }
+    if (glowMaterialRef.current) {
+      glowMaterialRef.current.opacity = 0.12 * intensity;
+    }
+    if (borderMaterialRef.current) {
+      borderMaterialRef.current.opacity = 0.94 * intensity;
+    }
+    if (leaderMaterialRef.current) {
+      leaderMaterialRef.current.opacity = 0.8 * intensity;
+    }
+    if (accentMaterialRef.current) {
+      accentMaterialRef.current.opacity = 0.92 * intensity;
+    }
+    if (scanlineMaterialRef.current) {
+      scanlineMaterialRef.current.opacity =
+        (0.08 + Math.sin(clock.elapsedTime * 5 + flickerOffset) * 0.025) *
+        easedOpacity;
+    }
+    if (titleTextRef.current) {
+      titleTextRef.current.fillOpacity = 1 * intensity;
+      titleTextRef.current.strokeOpacity = 0.95 * intensity;
+      titleTextRef.current.outlineOpacity = 0.72 * intensity;
+    }
+    if (summaryTextRef.current) {
+      summaryTextRef.current.fillOpacity = 1 * intensity;
+      summaryTextRef.current.strokeOpacity = 0.9 * intensity;
+      summaryTextRef.current.outlineOpacity = 0.72 * intensity;
+    }
+    if (accentTextRef.current) {
+      accentTextRef.current.fillOpacity = 0.98 * intensity;
+      accentTextRef.current.strokeOpacity = 0.86 * intensity;
+      accentTextRef.current.outlineOpacity = 0.72 * intensity;
+    }
+  });
+
+  return (
+    <>
+      <lineSegments geometry={leaderGeometry} renderOrder={5}>
+        <lineBasicMaterial
+          ref={leaderMaterialRef}
+          color={borderColor}
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </lineSegments>
+
+      <Billboard ref={rootRef} follow>
+        <mesh position={[0, 0, -0.02]} scale={[1.02, 1.04, 1]} renderOrder={5}>
+          <planeGeometry args={[panelWidth, panelHeight]} />
+          <meshBasicMaterial
+            ref={backplateMaterialRef}
+            color="#02060a"
+            transparent
+            opacity={0}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh renderOrder={6}>
+          <planeGeometry args={[panelWidth, panelHeight]} />
+          <meshBasicMaterial
+            ref={plateMaterialRef}
+            color={plateColor}
+            transparent
+            opacity={0}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh position={[0, 0, -0.01]} scale={[1.06, 1.08, 1]} renderOrder={5}>
+          <planeGeometry args={[panelWidth, panelHeight]} />
+          <meshBasicMaterial
+            ref={glowMaterialRef}
+            color={glowColor}
+            transparent
+            opacity={0}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <lineSegments geometry={borderGeometry} renderOrder={7}>
+          <lineBasicMaterial
+            ref={borderMaterialRef}
+            color={borderColor}
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
+        </lineSegments>
+        <lineSegments
+          geometry={accentGeometry}
+          position={[0, 0, 0.01]}
+          renderOrder={8}
+        >
+          <lineBasicMaterial
+            ref={accentMaterialRef}
+            color={borderColor}
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
+        </lineSegments>
+        <lineSegments
+          geometry={scanlineGeometry}
+          position={[0, 0, 0.01]}
+          renderOrder={7}
+        >
+          <lineBasicMaterial
+            ref={scanlineMaterialRef}
+            color={hologramColor}
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
+        </lineSegments>
+
+        <Text
+          ref={titleTextRef}
+          font={HOLOGRAM_FONT_PATH}
+          position={[-panelWidth / 2 + 0.18, panelHeight / 2 - 0.28, 0.03]}
+          anchorX="left"
+          anchorY="middle"
+          fontSize={0.23}
+          letterSpacing={0.08}
+          color={ultraBrightColor}
+          outlineWidth={0.07}
+          outlineColor="#000000" //this adds a bit of contrast, but isn't really visible for some reason
+          fillOpacity={1}
+          strokeOpacity={0}
+          outlineOpacity={0}
+        >
+          {config.category.toUpperCase()}
+        </Text>
+        <Text
+          ref={summaryTextRef}
+          font={HOLOGRAM_FONT_PATH}
+          position={[-panelWidth / 2 + 0.18, 0.02, 0.03]}
+          anchorX="left"
+          anchorY="middle"
+          maxWidth={panelWidth - 0.42}
+          fontSize={0.18}
+          lineHeight={1.22}
+          letterSpacing={0.035}
+          color="#ffffff"
+          outlineWidth={0.04}
+          outlineColor="#010509"
+          strokeWidth={0.012}
+          strokeColor="#ffffff"
+          fillOpacity={0}
+          strokeOpacity={0}
+          outlineOpacity={0}
+        >
+          {config.summary}
+        </Text>
+        <Text
+          ref={accentTextRef}
+          font={HOLOGRAM_FONT_PATH}
+          position={[-panelWidth / 2 + 0.18, -panelHeight / 2 + 0.24, 0.03]}
+          anchorX="left"
+          anchorY="middle"
+          fontSize={0.155}
+          letterSpacing={0.06}
+          color="#eefaf5"
+          outlineWidth={0.036}
+          outlineColor="#010509"
+          strokeWidth={0.012}
+          strokeColor={borderColor}
+          fillOpacity={0}
+          strokeOpacity={0}
+          outlineOpacity={0}
+        >
+          {config.accent}
+        </Text>
+      </Billboard>
+    </>
+  );
+}
+
 function WireframeModel({
   path,
   targetSize,
@@ -289,12 +738,14 @@ function WireframeModel({
 function UniverseAnchoredObject({
   viewIndex,
   placement,
+  specCard,
   hoverScale = 1.12,
   onHoverChange,
   children,
 }: UniverseAnchoredObjectProps) {
   const canvasSize = useThree((state) => state.size);
-  const rootRef = useRef<THREE.Group>(null);
+  const anchorRef = useRef<THREE.Group>(null);
+  const modelRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
   const hoverVelocityRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -325,19 +776,20 @@ function UniverseAnchoredObject({
   }, [canvasSize.width]);
 
   useFrame(({ clock }, delta) => {
-    const root = rootRef.current;
-    if (!root) return;
+    const anchor = anchorRef.current;
+    const model = modelRef.current;
+    if (!anchor || !model) return;
 
-    root.visible = isDefaultView;
+    anchor.visible = isDefaultView;
     if (!isDefaultView) return;
 
     const elapsed = clock.getElapsedTime();
-    root.position.set(
+    anchor.position.set(
       titleAnchorX + placement.xOffset * horizontalSpreadScale,
       DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
       DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
     );
-    root.rotation.set(
+    model.rotation.set(
       (placement.rotationX ?? 0) + elapsed * (placement.spinX ?? 0),
       (placement.rotationY ?? 0) + elapsed * (placement.spinY ?? 0),
       (placement.rotationZ ?? 0) + elapsed * (placement.spinZ ?? 0),
@@ -355,7 +807,7 @@ function UniverseAnchoredObject({
 
     hoverScaleRef.current = hoverSpring.value;
     hoverVelocityRef.current = hoverSpring.velocity;
-    root.scale.setScalar(responsiveScale * hoverScaleRef.current);
+    anchor.scale.setScalar(responsiveScale * hoverScaleRef.current);
   });
 
   const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
@@ -372,11 +824,14 @@ function UniverseAnchoredObject({
 
   return (
     <group
-      ref={rootRef}
+      ref={anchorRef}
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      {children({ isHovered: isActivelyHovered })}
+      <group ref={modelRef}>{children({ isHovered: isActivelyHovered })}</group>
+      {specCard ? (
+        <HolographicSpecCard config={specCard} isVisible={isActivelyHovered} />
+      ) : null}
     </group>
   );
 }
@@ -386,6 +841,7 @@ export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
     <UniverseAnchoredObject
       viewIndex={viewIndex}
       placement={REFLEX_CAMERA_PLACEMENT}
+      specCard={REFLEX_CAMERA_SPEC_CARD}
     >
       {({ isHovered }) => (
         <WireframeModel
@@ -414,6 +870,7 @@ export function UniverseComputer({
       viewIndex={viewIndex}
       placement={COMPUTER_PLACEMENT}
       onHoverChange={onHoverChange}
+      specCard={COMPUTER_SPEC_CARD}
     >
       {({ isHovered }) => (
         <WireframeModel
@@ -435,6 +892,7 @@ export function UniverseBass({ viewIndex }: UniverseBassProps) {
       viewIndex={viewIndex}
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
+      specCard={BASS_SPEC_CARD}
     >
       {({ isHovered }) => (
         <WireframeModel
