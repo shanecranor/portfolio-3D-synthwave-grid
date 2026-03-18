@@ -81,6 +81,8 @@ const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
 const CAMERA_WIREFRAME_COLOR = new THREE.Color("#a86b48");
 const HOLOGRAM_FONT_PATH = "/_astroarmada.ttf";
+const HOLOGRAM_BODY_FONT_PATH_BOLD = "/Orbitron-Black.ttf";
+const HOLOGRAM_BODY_FONT_PATH = "/Orbitron-Bold.ttf";
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
@@ -325,7 +327,7 @@ function HolographicSpecCard({
     [hologramColor],
   );
   const ultraBrightColor = useMemo(
-    () => hologramColor.clone().multiplyScalar(3.5).addScalar(0.3),
+    () => hologramColor.clone().multiplyScalar(1.74).addScalar(0.1),
     [hologramColor],
   );
   const glowColor = useMemo(
@@ -591,41 +593,31 @@ function HolographicSpecCard({
         </Text>
         <Text
           ref={summaryTextRef}
-          font={HOLOGRAM_FONT_PATH}
+          font={HOLOGRAM_BODY_FONT_PATH}
           position={[-panelWidth / 2 + 0.18, 0.02, 0.03]}
           anchorX="left"
           anchorY="middle"
           maxWidth={panelWidth - 0.42}
           fontSize={0.18}
-          lineHeight={1.22}
-          letterSpacing={0.035}
-          color="#ffffff"
-          outlineWidth={0.04}
-          outlineColor="#010509"
-          strokeWidth={0.012}
-          strokeColor="#ffffff"
-          fillOpacity={0}
-          strokeOpacity={0}
-          outlineOpacity={0}
+          lineHeight={1.3}
+          letterSpacing={0.06}
+          color="#e1e1e1"
+          outlineWidth={0.08}
+          outlineColor="#000000"
         >
           {config.summary}
         </Text>
         <Text
           ref={accentTextRef}
-          font={HOLOGRAM_FONT_PATH}
+          font={HOLOGRAM_BODY_FONT_PATH_BOLD}
           position={[-panelWidth / 2 + 0.18, -panelHeight / 2 + 0.24, 0.03]}
           anchorX="left"
           anchorY="middle"
           fontSize={0.155}
-          letterSpacing={0.06}
-          color="#eefaf5"
+          letterSpacing={0.2}
+          color={ultraBrightColor}
           outlineWidth={0.036}
-          outlineColor="#010509"
-          strokeWidth={0.012}
-          strokeColor={borderColor}
-          fillOpacity={0}
-          strokeOpacity={0}
-          outlineOpacity={0}
+          outlineColor="#000000"
         >
           {config.accent}
         </Text>
