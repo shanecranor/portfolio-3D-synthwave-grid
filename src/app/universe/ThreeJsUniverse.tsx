@@ -99,11 +99,12 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
     </div>
   );
 }
-const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
+// const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
+const EDGE_COLOR = [209, 109, 169];
 const SPHERE_GLOW_COLOR = [69, 49, 99];
 
 export const ThreeJsUniverse = () => {
-  const edgeBrightness = 2.3;
+  const edgeBrightness = 1.0;
   const edgeColor = useMemo(
     () => new THREE.Color(...EDGE_COLOR.map((c) => (c / 255) * edgeBrightness)),
     [],
@@ -215,7 +216,7 @@ export const ThreeJsUniverse = () => {
         <EffectComposer>
           <Bloom
             luminanceThreshold={0}
-            intensity={1}
+            intensity={1.2}
             levels={7}
             mipmapBlur
             opacity={0.9}
@@ -226,7 +227,7 @@ export const ThreeJsUniverse = () => {
             darkness={0.6}
             blendFunction={BlendFunction.DARKEN}
           />
-          <BrightnessContrast brightness={0} contrast={0.1} />
+          <BrightnessContrast brightness={0} contrast={0.14} />
           <Scanline density={1} opacity={0.1} scrollSpeed={0.01} />
         </EffectComposer>
       </Canvas>

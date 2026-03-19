@@ -201,7 +201,7 @@ export function NoisySphere({
 
   useFrame(({ clock }) => {
     if (groupRef.current) {
-      groupRef.current.rotation.x = clock.elapsedTime * 0.03;
+      groupRef.current.rotation.x = clock.elapsedTime * 0.015;
     }
   });
 
@@ -212,7 +212,7 @@ export function NoisySphere({
         // scale={[0.998, 0.998, 0.998]}
         scale={0.999}
       >
-        <meshBasicMaterial color={[0.02, 0, 0.01]} />
+        <meshBasicMaterial color={[0.015, 0.005, 0.01]} />
         {/* <MeshTransmissionMaterial
           backside
           samples={4}
