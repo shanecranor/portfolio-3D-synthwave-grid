@@ -75,7 +75,9 @@ const GREEN_WIREFRAME_COLOR = new THREE.Color("#73d1ad");
 const BLUE_WIREFRAME_COLOR = new THREE.Color("#3694cb").multiplyScalar(1.35);
 const BASS_FILL_COLOR = new THREE.Color("#040814");
 const CAMERA_FILL_COLOR = new THREE.Color("#050505");
-const CAMERA_WIREFRAME_COLOR = new THREE.Color("#a86b48");
+// const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ba9f79");
+const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ba9379");
+
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
@@ -97,16 +99,16 @@ const REFLEX_CAMERA_SPEC_CARD: HolographicSpecConfig = {
   summary: "Capturing mundane & captivating moments with interesting gear.",
   accent: "Z6 / RAW / DARKTABLE",
   color: CAMERA_WIREFRAME_COLOR,
-  panelOffset: [5, -0.5, 2.5],
+  panelOffset: [5, -0.5, 1.5],
   panelSize: [4, 1.55],
 };
 
 const BASS_SPEC_CARD: HolographicSpecConfig = {
-  category: "Sound",
-  summary: "Low-end pulse, analog texture, and rhythm-driven scene identity.",
-  accent: "SYNTH / TIMBRE",
+  category: "Music",
+  summary: "Bass, Drums, Guitar, Synth, Production, etc.",
+  accent: "STREAM / NOW",
   color: BLUE_WIREFRAME_COLOR,
-  panelOffset: [-3, 1, 0.5],
+  panelOffset: [-3, 0, 1.5],
   panelSize: [3.1, 1.6],
 };
 
