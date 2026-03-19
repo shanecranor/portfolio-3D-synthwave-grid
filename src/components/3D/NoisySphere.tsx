@@ -151,6 +151,7 @@ type NoisySphereProps = {
   yNoiseScale?: number;
   displaceYScale?: number;
   cylinderMorph?: number;
+  rotateAnimation?: [number, number, number];
 };
 
 export function NoisySphere({
