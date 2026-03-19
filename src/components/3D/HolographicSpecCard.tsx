@@ -267,7 +267,7 @@ export function HolographicSpecCard({
     }
     if (scanlineMaterialRef.current) {
       scanlineMaterialRef.current.opacity =
-        (0.08 + Math.sin(clock.elapsedTime * 5 + flickerOffset) * 0.025) *
+        (0.1 + Math.sin(clock.elapsedTime * 5 + flickerOffset) * 0.025) *
         easedOpacity;
     }
     if (titleTextRef.current) {
