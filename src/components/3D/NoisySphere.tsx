@@ -166,6 +166,7 @@ export function NoisySphere({
   yNoiseScale = 0.4,
   displaceYScale = 0.6,
   cylinderMorph = 0,
+  rotateAnimation = [0.015, 0, 0],
 }: NoisySphereProps) {
   const groupRef = useRef<THREE.Group>(null);
 
@@ -200,9 +201,11 @@ export function NoisySphere({
   ]);
 
   useFrame(({ clock }) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.x = clock.elapsedTime * 0.015;
-    }
+    if (!groupRef.current) return;
+    const time = clock.getElapsedTime();
+    groupRef.current.rotation.x = rotation[0] + rotateAnimation[0] * time;
+    groupRef.current.rotation.y = rotation[1] + rotateAnimation[1] * time;
+    groupRef.current.rotation.z = rotation[2] + rotateAnimation[2] * time;
   });
 
   return (
