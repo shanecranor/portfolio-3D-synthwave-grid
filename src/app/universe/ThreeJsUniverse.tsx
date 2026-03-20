@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Bloom,
@@ -113,6 +113,79 @@ function CodeSnippetsOverlay({ active }: { active: boolean }) {
 const EDGE_COLOR = [209, 109, 169];
 const SPHERE_GLOW_COLOR = [69, 49, 99];
 
+const UniverseBackdrop = memo(function UniverseBackdrop({
+  edgeColor,
+  noiseAmount,
+  poleNoiseFloor,
+  equatorPower,
+  yNoiseScale,
+  displaceYScale,
+  cylinderMorph,
+  glowColor,
+}: {
+  edgeColor: THREE.Color;
+  noiseAmount: number;
+  poleNoiseFloor: number;
+  equatorPower: number;
+  yNoiseScale: number;
+  displaceYScale: number;
+  cylinderMorph: number;
+  glowColor?: THREE.Color;
+}) {
+  return (
+    <>
+      <Detailed distances={[3, 25]}>
+        <NoisySphere
+          radius={10}
+          widthSegments={350}
+          heightSegments={70}
+          noiseAmount={noiseAmount}
+          edgeColor={edgeColor}
+          flatCenter={true}
+          poleNoiseFloor={poleNoiseFloor}
+          equatorPower={equatorPower}
+          yNoiseScale={yNoiseScale}
+          displaceYScale={displaceYScale}
+          cylinderMorph={cylinderMorph}
+        />
+        <NoisySphere
+          radius={10}
+          widthSegments={32}
+          heightSegments={32}
+          noiseAmount={noiseAmount}
+          edgeColor={edgeColor}
+          flatCenter={true}
+          poleNoiseFloor={poleNoiseFloor}
+          equatorPower={equatorPower}
+          yNoiseScale={yNoiseScale}
+          displaceYScale={displaceYScale}
+          cylinderMorph={cylinderMorph}
+        />
+      </Detailed>
+      <GlowSphere radius={10} glowColor={glowColor} />
+      <RotatingStars />
+
+      <EffectComposer>
+        <Bloom
+          luminanceThreshold={0}
+          intensity={1.2}
+          levels={7}
+          mipmapBlur
+          opacity={0.9}
+        />
+        <Noise opacity={0.01} />
+        <Vignette
+          offset={0.4}
+          darkness={0.6}
+          blendFunction={BlendFunction.DARKEN}
+        />
+        <BrightnessContrast brightness={0} contrast={0.14} />
+        <Scanline density={1} opacity={0.1} scrollSpeed={0.01} />
+      </EffectComposer>
+    </>
+  );
+});
+
 export const ThreeJsUniverse = () => {
   const router = useRouter();
   const edgeBrightness = 1.0;
@@ -167,7 +240,7 @@ export const ThreeJsUniverse = () => {
     : null;
   const isComputerHovered = hoverState?.sectionId === "projects";
 
-  const handleSectionHoverStateChange = (
+  const handleSectionHoverStateChange = useCallback((
     sectionId: UniverseSectionId,
     isHovered: boolean,
     focus: CameraHoverFocus,
@@ -183,9 +256,9 @@ export const ThreeJsUniverse = () => {
 
       return null;
     });
-  };
+  }, []);
 
-  const handleSectionSelect = (sectionId: UniverseSectionId) => {
+  const handleSectionSelect = useCallback((sectionId: UniverseSectionId) => {
     const section = UNIVERSE_SECTIONS[sectionId];
 
     if (section.external) {
@@ -194,7 +267,7 @@ export const ThreeJsUniverse = () => {
     }
 
     router.push(section.href);
-  };
+  }, [router]);
 
   return (
     <div
@@ -236,57 +309,16 @@ export const ThreeJsUniverse = () => {
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
         />
-        <Detailed distances={[3, 25]}>
-          <NoisySphere
-            radius={10}
-            widthSegments={350}
-            heightSegments={70}
-            noiseAmount={noiseAmount}
-            edgeColor={edgeColor}
-            flatCenter={true}
-            poleNoiseFloor={poleNoiseFloor}
-            equatorPower={equatorPower}
-            yNoiseScale={yNoiseScale}
-            displaceYScale={displaceYScale}
-            cylinderMorph={cylinderMorph}
-          />
-          <NoisySphere
-            radius={10}
-            widthSegments={32}
-            heightSegments={32}
-            noiseAmount={noiseAmount}
-            edgeColor={edgeColor}
-            flatCenter={true}
-            poleNoiseFloor={poleNoiseFloor}
-            equatorPower={equatorPower}
-            yNoiseScale={yNoiseScale}
-            displaceYScale={displaceYScale}
-            cylinderMorph={cylinderMorph}
-          />
-        </Detailed>
-        <GlowSphere
-          radius={10}
+        <UniverseBackdrop
+          edgeColor={edgeColor}
+          noiseAmount={noiseAmount}
+          poleNoiseFloor={poleNoiseFloor}
+          equatorPower={equatorPower}
+          yNoiseScale={yNoiseScale}
+          displaceYScale={displaceYScale}
+          cylinderMorph={cylinderMorph}
           glowColor={isGlowVisible ? sphereGlowColor : undefined}
         />
-        <RotatingStars />
-
-        <EffectComposer>
-          <Bloom
-            luminanceThreshold={0}
-            intensity={1.2}
-            levels={7}
-            mipmapBlur
-            opacity={0.9}
-          />
-          <Noise opacity={0.01} />
-          <Vignette
-            offset={0.4}
-            darkness={0.6}
-            blendFunction={BlendFunction.DARKEN}
-          />
-          <BrightnessContrast brightness={0} contrast={0.14} />
-          <Scanline density={1} opacity={0.1} scrollSpeed={0.01} />
-        </EffectComposer>
       </Canvas>
 
       <div
