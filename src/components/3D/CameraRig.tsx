@@ -25,14 +25,22 @@ export const VIEWS: ViewConfig[] = [
   },
 ];
 
+export type CameraHoverFocus = {
+  point: [number, number, number];
+  positionInfluence?: number;
+  targetInfluence?: number;
+};
+
 type CameraRigProps = {
   viewIndex: number;
   manualControlEnabled?: boolean;
+  hoverFocus?: CameraHoverFocus | null;
 };
 
 export function CameraRig({
   viewIndex,
   manualControlEnabled = false,
+  hoverFocus = null,
 }: CameraRigProps) {
   const camera = useThree((state) => state.camera);
   const initializedRef = useRef(false);
@@ -41,6 +49,7 @@ export function CameraRig({
   const desiredPos = useMemo(() => new THREE.Vector3(), []);
   const desiredTarget = useMemo(() => new THREE.Vector3(), []);
   const desiredUp = useMemo(() => new THREE.Vector3(), []);
+  const hoverPoint = useMemo(() => new THREE.Vector3(), []);
 
   const view = VIEWS[viewIndex];
 
@@ -98,6 +107,12 @@ export function CameraRig({
       desiredUp.set(...view.up);
     } else {
       desiredUp.set(0, 1, 0);
+    }
+
+    if (hoverFocus && viewIndex === 0) {
+      hoverPoint.set(...hoverFocus.point);
+      desiredPos.lerp(hoverPoint, hoverFocus.positionInfluence ?? 0.03);
+      desiredTarget.lerp(hoverPoint, hoverFocus.targetInfluence ?? 0.05);
     }
 
     const posEase = 1 - Math.exp(-4 * delta);

@@ -14,7 +14,11 @@ import { BlendFunction } from "postprocessing";
 import { Detailed, Loader, Stars, TrackballControls } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { GlowSphere } from "@/components/3D/GlowSphere";
-import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
+import {
+  CameraRig,
+  type CameraHoverFocus,
+  VIEWS,
+} from "@/components/3D/CameraRig";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
 import {
   UniverseBass,
@@ -116,6 +120,8 @@ export const ThreeJsUniverse = () => {
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
   const [isComputerHovered, setIsComputerHovered] = useState(false);
+  const [hoveredObjectFocus, setHoveredObjectFocus] =
+    useState<CameraHoverFocus | null>(null);
   const [isGlowVisible, setIsGlowVisible] = useState(true);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
@@ -162,6 +168,7 @@ export const ThreeJsUniverse = () => {
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
+          hoverFocus={hoveredObjectFocus}
         />
         {isTrackballView && (
           <TrackballControls
@@ -172,13 +179,20 @@ export const ThreeJsUniverse = () => {
           />
         )}
         <UniverseTitle viewIndex={activeViewIndex} />
-        <UniverseReflexCamera viewIndex={activeViewIndex} />
+        <UniverseReflexCamera
+          viewIndex={activeViewIndex}
+          onHoverFocusChange={setHoveredObjectFocus}
+        />
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}
           onHoverChange={setIsComputerHovered}
+          onHoverFocusChange={setHoveredObjectFocus}
         />
-        <UniverseBass viewIndex={activeViewIndex} />
+        <UniverseBass
+          viewIndex={activeViewIndex}
+          onHoverFocusChange={setHoveredObjectFocus}
+        />
         <Detailed distances={[3, 25]}>
           <NoisySphere
             radius={10}

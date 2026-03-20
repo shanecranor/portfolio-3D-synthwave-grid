@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import type { CameraHoverFocus } from "@/components/3D/CameraRig";
 import {
   HolographicSpecCard,
   type HolographicSpecConfig,
@@ -21,14 +22,17 @@ type UniverseComputerProps = {
   modelIndex: number;
   targetSize?: number;
   onHoverChange?: (isHovered: boolean) => void;
+  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
 };
 
 type UniverseBassProps = {
   viewIndex: number;
+  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
 };
 
 type UniverseReflexCameraProps = {
   viewIndex: number;
+  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
 };
 
 type WireframeModelConfig = {
@@ -59,6 +63,7 @@ type UniverseAnchoredObjectProps = {
   specCard?: HolographicSpecConfig;
   hoverScale?: number;
   onHoverChange?: (isHovered: boolean) => void;
+  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
   children: (state: { isHovered: boolean }) => ReactNode;
 };
 
@@ -263,6 +268,7 @@ function UniverseAnchoredObject({
   specCard,
   hoverScale = 1.12,
   onHoverChange,
+  onHoverFocusChange,
   children,
 }: UniverseAnchoredObjectProps) {
   const canvasSize = useThree((state) => state.size);
@@ -296,6 +302,32 @@ function UniverseAnchoredObject({
   const titleAnchorX = useMemo(() => {
     return getUniverseTitleAnchorX(canvasSize.width);
   }, [canvasSize.width]);
+  const hoverFocus = useMemo<CameraHoverFocus>(
+    () => ({
+      point: [
+        titleAnchorX + placement.xOffset * horizontalSpreadScale,
+        DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
+        DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
+      ],
+      positionInfluence: 0.03,
+      targetInfluence: 0.05,
+    }),
+    [
+      horizontalSpreadScale,
+      placement.xOffset,
+      placement.yOffset,
+      placement.zOffset,
+      titleAnchorX,
+    ],
+  );
+
+  useEffect(() => {
+    onHoverFocusChange?.(isActivelyHovered ? hoverFocus : null);
+
+    return () => {
+      onHoverFocusChange?.(null);
+    };
+  }, [hoverFocus, isActivelyHovered, onHoverFocusChange]);
 
   useFrame(({ clock }, delta) => {
     const anchor = anchorRef.current;
@@ -360,12 +392,16 @@ function UniverseAnchoredObject({
   );
 }
 
-export function UniverseReflexCamera({ viewIndex }: UniverseReflexCameraProps) {
+export function UniverseReflexCamera({
+  viewIndex,
+  onHoverFocusChange,
+}: UniverseReflexCameraProps) {
   return (
     <UniverseAnchoredObject
       viewIndex={viewIndex}
       placement={REFLEX_CAMERA_PLACEMENT}
       specCard={REFLEX_CAMERA_SPEC_CARD}
+      onHoverFocusChange={onHoverFocusChange}
     >
       {({ isHovered }) => (
         <WireframeModel
@@ -386,6 +422,7 @@ export function UniverseComputer({
   modelIndex,
   targetSize = 3.6,
   onHoverChange,
+  onHoverFocusChange,
 }: UniverseComputerProps) {
   const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
 
@@ -394,6 +431,7 @@ export function UniverseComputer({
       viewIndex={viewIndex}
       placement={COMPUTER_PLACEMENT}
       onHoverChange={onHoverChange}
+      onHoverFocusChange={onHoverFocusChange}
       specCard={COMPUTER_SPEC_CARD}
     >
       {({ isHovered }) => (
@@ -410,13 +448,17 @@ export function UniverseComputer({
   );
 }
 
-export function UniverseBass({ viewIndex }: UniverseBassProps) {
+export function UniverseBass({
+  viewIndex,
+  onHoverFocusChange,
+}: UniverseBassProps) {
   return (
     <UniverseAnchoredObject
       viewIndex={viewIndex}
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
       specCard={BASS_SPEC_CARD}
+      onHoverFocusChange={onHoverFocusChange}
     >
       {({ isHovered }) => (
         <WireframeModel
