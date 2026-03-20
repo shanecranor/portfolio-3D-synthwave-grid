@@ -5,10 +5,6 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { CameraHoverFocus } from "@/components/3D/CameraRig";
-import {
-  HolographicSpecCard,
-  type HolographicSpecConfig,
-} from "@/components/3D/HolographicSpecCard";
 import { stepDampedSpring } from "@/components/3D/stepDampedSpring";
 import {
   DEFAULT_UNIVERSE_ANCHOR_Y,
@@ -16,33 +12,38 @@ import {
   getUniverseResponsiveWidthFactor,
   getUniverseTitleAnchorX,
 } from "@/components/3D/universeLayout";
+import type { UniverseSectionId } from "@/data/universeSections";
 
 type UniverseComputerProps = {
   viewIndex: number;
   modelIndex: number;
   targetSize?: number;
-  onHoverChange?: (isHovered: boolean) => void;
-  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
+  onHoverStateChange?: (
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
+  onSelect?: (sectionId: UniverseSectionId) => void;
 };
 
 type UniverseBassProps = {
   viewIndex: number;
-  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
+  onHoverStateChange?: (
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
+  onSelect?: (sectionId: UniverseSectionId) => void;
 };
 
 type UniverseReflexCameraProps = {
   viewIndex: number;
-  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
-};
-
-type WireframeModelConfig = {
-  path: string;
-  targetSize: number;
-  fillColor?: THREE.ColorRepresentation;
-  wireframeColor?: THREE.ColorRepresentation;
-  wireframeOpacity?: number;
-  isHovered?: boolean;
-  hoverWireframeOpacityMultiplier?: number;
+  onHoverStateChange?: (
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
+  onSelect?: (sectionId: UniverseSectionId) => void;
 };
 
 type AnchoredPlacementConfig = {
@@ -58,14 +59,28 @@ type AnchoredPlacementConfig = {
 };
 
 type UniverseAnchoredObjectProps = {
+  sectionId: UniverseSectionId;
   viewIndex: number;
   placement: AnchoredPlacementConfig;
-  specCard?: HolographicSpecConfig;
   hoverScale?: number;
   hitbox?: HitboxConfig;
-  onHoverChange?: (isHovered: boolean) => void;
-  onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
+  onHoverStateChange?: (
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
+  onSelect?: (sectionId: UniverseSectionId) => void;
   children: (state: { isHovered: boolean }) => ReactNode;
+};
+
+type WireframeModelConfig = {
+  path: string;
+  targetSize: number;
+  fillColor?: THREE.ColorRepresentation;
+  wireframeColor?: THREE.ColorRepresentation;
+  wireframeOpacity?: number;
+  isHovered?: boolean;
+  hoverWireframeOpacityMultiplier?: number;
 };
 
 type HitboxConfig = {
@@ -94,34 +109,6 @@ const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const MIN_HORIZONTAL_SPREAD = 0.35;
 const MAX_HORIZONTAL_SPREAD = 1;
-
-const COMPUTER_SPEC_CARD: HolographicSpecConfig = {
-  category: "Development",
-  summary:
-    "Solving interesting problems, building useful tools, and exploring new tech.",
-  accent: "FULL STACK",
-  color: GREEN_WIREFRAME_COLOR,
-  panelOffset: [2.65, 0, 1.5],
-  panelSize: [3.4, 1.8],
-};
-
-const REFLEX_CAMERA_SPEC_CARD: HolographicSpecConfig = {
-  category: "Photography",
-  summary: "Capturing mundane & captivating moments with interesting gear.",
-  accent: "Z6 / RAW / DARKTABLE",
-  color: CAMERA_WIREFRAME_COLOR,
-  panelOffset: [5, -0.5, 1.5],
-  panelSize: [4, 1.55],
-};
-
-const BASS_SPEC_CARD: HolographicSpecConfig = {
-  category: "Music",
-  summary: "Bass, Drums, Guitar, Synth, Production, etc.",
-  accent: "STREAM / NOW",
-  color: BLUE_WIREFRAME_COLOR,
-  panelOffset: [-3, 0, 1.5],
-  panelSize: [3.1, 1.6],
-};
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.75,
@@ -282,13 +269,13 @@ function WireframeModel({
 }
 
 function UniverseAnchoredObject({
+  sectionId,
   viewIndex,
   placement,
-  specCard,
   hoverScale = 1.12,
   hitbox,
-  onHoverChange,
-  onHoverFocusChange,
+  onHoverStateChange,
+  onSelect,
   children,
 }: UniverseAnchoredObjectProps) {
   const canvasSize = useThree((state) => state.size);
@@ -300,14 +287,6 @@ function UniverseAnchoredObject({
 
   const isDefaultView = viewIndex === 0 || true;
   const isActivelyHovered = isDefaultView && isHovered;
-
-  useEffect(() => {
-    onHoverChange?.(isActivelyHovered);
-
-    return () => {
-      onHoverChange?.(false);
-    };
-  }, [isActivelyHovered, onHoverChange]);
 
   const responsiveScale = useMemo(() => {
     const minScale = 0.12;
@@ -342,12 +321,12 @@ function UniverseAnchoredObject({
   );
 
   useEffect(() => {
-    onHoverFocusChange?.(isActivelyHovered ? hoverFocus : null);
+    onHoverStateChange?.(sectionId, isActivelyHovered, hoverFocus);
 
     return () => {
-      onHoverFocusChange?.(null);
+      onHoverStateChange?.(sectionId, false, hoverFocus);
     };
-  }, [hoverFocus, isActivelyHovered, onHoverFocusChange]);
+  }, [hoverFocus, isActivelyHovered, onHoverStateChange, sectionId]);
 
   useFrame(({ clock }, delta) => {
     const anchor = anchorRef.current;
@@ -396,12 +375,18 @@ function UniverseAnchoredObject({
     setIsHovered(false);
   };
 
+  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    onSelect?.(sectionId);
+  };
+
   return (
     <group ref={anchorRef}>
       <group
         ref={modelRef}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
+        onClick={handleClick}
       >
         {hitbox ? (
           <mesh position={hitbox.offset}>
@@ -418,24 +403,23 @@ function UniverseAnchoredObject({
         ) : null}
         {children({ isHovered: isActivelyHovered })}
       </group>
-      {specCard ? (
-        <HolographicSpecCard config={specCard} isVisible={isActivelyHovered} />
-      ) : null}
     </group>
   );
 }
 
 export function UniverseReflexCamera({
   viewIndex,
-  onHoverFocusChange,
+  onHoverStateChange,
+  onSelect,
 }: UniverseReflexCameraProps) {
   return (
     <UniverseAnchoredObject
+      sectionId="photography"
       viewIndex={viewIndex}
       placement={REFLEX_CAMERA_PLACEMENT}
-      specCard={REFLEX_CAMERA_SPEC_CARD}
       hitbox={REFLEX_CAMERA_HITBOX}
-      onHoverFocusChange={onHoverFocusChange}
+      onHoverStateChange={onHoverStateChange}
+      onSelect={onSelect}
     >
       {({ isHovered }) => (
         <WireframeModel
@@ -455,19 +439,19 @@ export function UniverseComputer({
   viewIndex,
   modelIndex,
   targetSize = 3.6,
-  onHoverChange,
-  onHoverFocusChange,
+  onHoverStateChange,
+  onSelect,
 }: UniverseComputerProps) {
   const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
 
   return (
     <UniverseAnchoredObject
+      sectionId="projects"
       viewIndex={viewIndex}
       placement={COMPUTER_PLACEMENT}
       hitbox={COMPUTER_HITBOX}
-      onHoverChange={onHoverChange}
-      onHoverFocusChange={onHoverFocusChange}
-      specCard={COMPUTER_SPEC_CARD}
+      onHoverStateChange={onHoverStateChange}
+      onSelect={onSelect}
     >
       {({ isHovered }) => (
         <WireframeModel
@@ -485,16 +469,18 @@ export function UniverseComputer({
 
 export function UniverseBass({
   viewIndex,
-  onHoverFocusChange,
+  onHoverStateChange,
+  onSelect,
 }: UniverseBassProps) {
   return (
     <UniverseAnchoredObject
+      sectionId="music"
       viewIndex={viewIndex}
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
-      specCard={BASS_SPEC_CARD}
       hitbox={BASS_HITBOX}
-      onHoverFocusChange={onHoverFocusChange}
+      onHoverStateChange={onHoverStateChange}
+      onSelect={onSelect}
     >
       {({ isHovered }) => (
         <WireframeModel

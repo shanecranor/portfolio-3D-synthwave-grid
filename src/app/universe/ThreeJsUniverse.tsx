@@ -26,6 +26,12 @@ import {
   UniverseReflexCamera,
   UNIVERSE_COMPUTER_MODEL_COUNT,
 } from "@/components/3D/UniverseComputer";
+import { UniverseHudOverlay } from "@/app/universe/UniverseHudOverlay";
+import {
+  UNIVERSE_SECTIONS,
+  type UniverseSectionId,
+} from "@/data/universeSections";
+import { useRouter } from "next/navigation";
 
 const CODE_SNIPPETS = [
   "const signal = await universe.boot({ target: 'shane.cranor.org' });",
@@ -108,6 +114,7 @@ const EDGE_COLOR = [209, 109, 169];
 const SPHERE_GLOW_COLOR = [69, 49, 99];
 
 export const ThreeJsUniverse = () => {
+  const router = useRouter();
   const edgeBrightness = 1.0;
   const edgeColor = useMemo(
     () => new THREE.Color(...EDGE_COLOR.map((c) => (c / 255) * edgeBrightness)),
@@ -119,9 +126,10 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
-  const [isComputerHovered, setIsComputerHovered] = useState(false);
-  const [hoveredObjectFocus, setHoveredObjectFocus] =
-    useState<CameraHoverFocus | null>(null);
+  const [hoverState, setHoverState] = useState<{
+    sectionId: UniverseSectionId;
+    focus: CameraHoverFocus;
+  } | null>(null);
   const [isGlowVisible, setIsGlowVisible] = useState(true);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
@@ -154,6 +162,39 @@ export const ThreeJsUniverse = () => {
   const activeView = VIEWS[activeViewIndex];
   const isTrackballView = activeViewIndex === 2;
   const initialView = VIEWS[0];
+  const hoveredSection = hoverState
+    ? UNIVERSE_SECTIONS[hoverState.sectionId]
+    : null;
+  const isComputerHovered = hoverState?.sectionId === "projects";
+
+  const handleSectionHoverStateChange = (
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => {
+    setHoverState((current) => {
+      if (isHovered) {
+        return { sectionId, focus };
+      }
+
+      if (current?.sectionId !== sectionId) {
+        return current;
+      }
+
+      return null;
+    });
+  };
+
+  const handleSectionSelect = (sectionId: UniverseSectionId) => {
+    const section = UNIVERSE_SECTIONS[sectionId];
+
+    if (section.external) {
+      window.location.assign(section.href);
+      return;
+    }
+
+    router.push(section.href);
+  };
 
   return (
     <div
@@ -168,7 +209,7 @@ export const ThreeJsUniverse = () => {
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
-          hoverFocus={hoveredObjectFocus}
+          hoverFocus={hoverState?.focus ?? null}
         />
         {isTrackballView && (
           <TrackballControls
@@ -181,17 +222,19 @@ export const ThreeJsUniverse = () => {
         <UniverseTitle viewIndex={activeViewIndex} />
         <UniverseReflexCamera
           viewIndex={activeViewIndex}
-          onHoverFocusChange={setHoveredObjectFocus}
+          onHoverStateChange={handleSectionHoverStateChange}
+          onSelect={handleSectionSelect}
         />
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}
-          onHoverChange={setIsComputerHovered}
-          onHoverFocusChange={setHoveredObjectFocus}
+          onHoverStateChange={handleSectionHoverStateChange}
+          onSelect={handleSectionSelect}
         />
         <UniverseBass
           viewIndex={activeViewIndex}
-          onHoverFocusChange={setHoveredObjectFocus}
+          onHoverStateChange={handleSectionHoverStateChange}
+          onSelect={handleSectionSelect}
         />
         <Detailed distances={[3, 25]}>
           <NoisySphere
@@ -251,6 +294,7 @@ export const ThreeJsUniverse = () => {
         aria-hidden="true"
       />
       <CodeSnippetsOverlay active={isComputerHovered} />
+      <UniverseHudOverlay section={hoveredSection} />
 
       {activeView && (
         <div
