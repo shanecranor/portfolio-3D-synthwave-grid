@@ -62,9 +62,15 @@ type UniverseAnchoredObjectProps = {
   placement: AnchoredPlacementConfig;
   specCard?: HolographicSpecConfig;
   hoverScale?: number;
+  hitbox?: HitboxConfig;
   onHoverChange?: (isHovered: boolean) => void;
   onHoverFocusChange?: (focus: CameraHoverFocus | null) => void;
   children: (state: { isHovered: boolean }) => ReactNode;
+};
+
+type HitboxConfig = {
+  size: [number, number, number];
+  offset?: [number, number, number];
 };
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
@@ -147,6 +153,19 @@ const BASS_PLACEMENT: AnchoredPlacementConfig = {
   rotationZ: 0,
   spinY: 0,
   spinZ: -0.4,
+};
+
+const COMPUTER_HITBOX: HitboxConfig = {
+  size: [3.2, 2, 3],
+};
+
+const REFLEX_CAMERA_HITBOX: HitboxConfig = {
+  size: [2, 1.4, 2],
+};
+
+const BASS_HITBOX: HitboxConfig = {
+  size: [1.5, 1.5, 6],
+  offset: [0.2, 0, 0],
 };
 
 function getHorizontalSpreadScale(width: number, height: number) {
@@ -267,6 +286,7 @@ function UniverseAnchoredObject({
   placement,
   specCard,
   hoverScale = 1.12,
+  hitbox,
   onHoverChange,
   onHoverFocusChange,
   children,
@@ -364,14 +384,14 @@ function UniverseAnchoredObject({
     anchor.scale.setScalar(responsiveScale * hoverScaleRef.current);
   });
 
-  const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+  const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     if (isDefaultView) {
       setIsHovered(true);
     }
   };
 
-  const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
+  const handlePointerLeave = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     setIsHovered(false);
   };
@@ -380,9 +400,22 @@ function UniverseAnchoredObject({
     <group ref={anchorRef}>
       <group
         ref={modelRef}
-        onPointerOver={handlePointerOver}
-        onPointerOut={handlePointerOut}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
       >
+        {hitbox ? (
+          <mesh position={hitbox.offset}>
+            <boxGeometry args={hitbox.size} />
+            <meshBasicMaterial
+              color="#ff4fd8"
+              wireframe
+              opacity={0}
+              depthWrite={false}
+              depthTest={false}
+              colorWrite={false}
+            />
+          </mesh>
+        ) : null}
         {children({ isHovered: isActivelyHovered })}
       </group>
       {specCard ? (
@@ -401,6 +434,7 @@ export function UniverseReflexCamera({
       viewIndex={viewIndex}
       placement={REFLEX_CAMERA_PLACEMENT}
       specCard={REFLEX_CAMERA_SPEC_CARD}
+      hitbox={REFLEX_CAMERA_HITBOX}
       onHoverFocusChange={onHoverFocusChange}
     >
       {({ isHovered }) => (
@@ -430,6 +464,7 @@ export function UniverseComputer({
     <UniverseAnchoredObject
       viewIndex={viewIndex}
       placement={COMPUTER_PLACEMENT}
+      hitbox={COMPUTER_HITBOX}
       onHoverChange={onHoverChange}
       onHoverFocusChange={onHoverFocusChange}
       specCard={COMPUTER_SPEC_CARD}
@@ -458,6 +493,7 @@ export function UniverseBass({
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
       specCard={BASS_SPEC_CARD}
+      hitbox={BASS_HITBOX}
       onHoverFocusChange={onHoverFocusChange}
     >
       {({ isHovered }) => (
