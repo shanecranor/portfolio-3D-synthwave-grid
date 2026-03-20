@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { stepDampedSpring } from "@/components/3D/stepDampedSpring";
 
 export type ViewConfig = {
   label: string;
@@ -31,6 +32,47 @@ export type CameraHoverFocus = {
   targetInfluence?: number;
 };
 
+const CAMERA_POSITION_SPRING_FREQUENCY = 7;
+const CAMERA_TARGET_SPRING_FREQUENCY = 8;
+const CAMERA_SPRING_DAMPING = 1.2;
+
+function stepVectorSpring(
+  current: THREE.Vector3,
+  velocity: THREE.Vector3,
+  target: THREE.Vector3,
+  delta: number,
+  angularFrequency: number,
+  dampingRatio: number,
+) {
+  const nextX = stepDampedSpring(
+    current.x,
+    velocity.x,
+    target.x,
+    delta,
+    angularFrequency,
+    dampingRatio,
+  );
+  const nextY = stepDampedSpring(
+    current.y,
+    velocity.y,
+    target.y,
+    delta,
+    angularFrequency,
+    dampingRatio,
+  );
+  const nextZ = stepDampedSpring(
+    current.z,
+    velocity.z,
+    target.z,
+    delta,
+    angularFrequency,
+    dampingRatio,
+  );
+
+  current.set(nextX.value, nextY.value, nextZ.value);
+  velocity.set(nextX.velocity, nextY.velocity, nextZ.velocity);
+}
+
 type CameraRigProps = {
   viewIndex: number;
   manualControlEnabled?: boolean;
@@ -46,6 +88,8 @@ export function CameraRig({
   const initializedRef = useRef(false);
   const currentTargetRef = useRef(new THREE.Vector3());
   const currentUpRef = useRef(new THREE.Vector3(0, 1, 0));
+  const positionVelocityRef = useRef(new THREE.Vector3());
+  const targetVelocityRef = useRef(new THREE.Vector3());
   const desiredPos = useMemo(() => new THREE.Vector3(), []);
   const desiredTarget = useMemo(() => new THREE.Vector3(), []);
   const desiredUp = useMemo(() => new THREE.Vector3(), []);
@@ -68,6 +112,8 @@ export function CameraRig({
       camera.position.set(...view.position);
       currentTargetRef.current.set(...view.target);
       currentUpRef.current.copy(desiredUp).normalize();
+      positionVelocityRef.current.set(0, 0, 0);
+      targetVelocityRef.current.set(0, 0, 0);
       camera.up.copy(currentUpRef.current);
       camera.lookAt(currentTargetRef.current);
       initializedRef.current = true;
@@ -91,9 +137,18 @@ export function CameraRig({
     camera.position.copy(desiredPos);
     currentTargetRef.current.copy(desiredTarget);
     currentUpRef.current.copy(desiredUp).normalize();
+    positionVelocityRef.current.set(0, 0, 0);
+    targetVelocityRef.current.set(0, 0, 0);
     camera.up.copy(currentUpRef.current);
     camera.lookAt(currentTargetRef.current);
-  }, [camera, view, manualControlEnabled, desiredPos, desiredTarget, desiredUp]);
+  }, [
+    camera,
+    view,
+    manualControlEnabled,
+    desiredPos,
+    desiredTarget,
+    desiredUp,
+  ]);
 
   useFrame((_, delta) => {
     if (!view || manualControlEnabled) return;
@@ -111,16 +166,28 @@ export function CameraRig({
 
     if (hoverFocus && viewIndex === 0) {
       hoverPoint.set(...hoverFocus.point);
-      desiredPos.lerp(hoverPoint, hoverFocus.positionInfluence ?? 0.03);
-      desiredTarget.lerp(hoverPoint, hoverFocus.targetInfluence ?? 0.05);
+      desiredPos.lerp(hoverPoint, hoverFocus.positionInfluence ?? 0.02);
+      desiredTarget.lerp(hoverPoint, hoverFocus.targetInfluence ?? 0.035);
     }
 
-    const posEase = 1 - Math.exp(-4 * delta);
-    const targetEase = 1 - Math.exp(-5 * delta);
     const upEase = 1 - Math.exp(-6 * delta);
 
-    camera.position.lerp(desiredPos, posEase);
-    currentTargetRef.current.lerp(desiredTarget, targetEase);
+    stepVectorSpring(
+      camera.position,
+      positionVelocityRef.current,
+      desiredPos,
+      delta,
+      CAMERA_POSITION_SPRING_FREQUENCY,
+      CAMERA_SPRING_DAMPING,
+    );
+    stepVectorSpring(
+      currentTargetRef.current,
+      targetVelocityRef.current,
+      desiredTarget,
+      delta,
+      CAMERA_TARGET_SPRING_FREQUENCY,
+      CAMERA_SPRING_DAMPING,
+    );
     currentUpRef.current.lerp(desiredUp, upEase).normalize();
 
     camera.up.copy(currentUpRef.current);
