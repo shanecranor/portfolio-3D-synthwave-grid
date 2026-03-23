@@ -22,19 +22,19 @@ const SECTION_INSTRUMENTS: Record<
     channel: "CH-01",
     mode: "ARCHIVE",
     scope: "FRAME",
-    waveform: [22, 36, 18, 48, 30, 54, 24, 40, 20, 32],
+    waveform: [24, 42, 20, 54, 28, 36],
   },
   projects: {
     channel: "CH-02",
     mode: "SIGNAL",
     scope: "VECTOR",
-    waveform: [16, 52, 26, 58, 34, 42, 24, 60, 30, 18],
+    waveform: [18, 58, 30, 48, 24, 62],
   },
   music: {
     channel: "CH-03",
     mode: "PLAYBACK",
     scope: "LEVEL",
-    waveform: [44, 18, 56, 28, 62, 34, 48, 26, 54, 22],
+    waveform: [46, 22, 58, 32, 62, 28],
   },
 };
 
@@ -94,8 +94,8 @@ export function UniverseHudOverlay({ section }: UniverseHudOverlayProps) {
   const activeInstrument = activeSection
     ? SECTION_INSTRUMENTS[activeSection.id]
     : null;
-  const metadata = activeSection
-    ? [activeInstrument?.mode, ...activeSection.tags.slice(0, 2)].filter(
+  const metadata = activeSection && activeInstrument
+    ? [activeInstrument.mode, activeSection.tags[0]].filter(
         (item): item is string => Boolean(item),
       )
     : [];
@@ -129,22 +129,20 @@ export function UniverseHudOverlay({ section }: UniverseHudOverlayProps) {
                 <span className="universe-hud__microcopy universe-hud__microcopy--accent">
                   {activeInstrument.channel}
                 </span>
-                <span className="universe-hud__microcopy">{activeInstrument.mode}</span>
               </div>
 
+              <div className="universe-hud__readout-rule" />
+
               <div className="universe-hud__display-frame">
+                <span className="universe-hud__display-bracket universe-hud__display-bracket--left" />
+                <span className="universe-hud__display-bracket universe-hud__display-bracket--right" />
                 <span className="universe-hud__display-label">VFD</span>
                 <span className="universe-hud__display">{activeSection.label}</span>
               </div>
 
-              <div className="universe-hud__readout-footer">
-                <span className="universe-hud__microcopy">{activeSection.status}</span>
-                <span className="universe-hud__microcopy">{activeSection.actionLabel}</span>
-              </div>
-
-              <div className="universe-hud__metadata-strip">
+              <div className="universe-hud__metadata-line">
                 {metadata.map((item) => (
-                  <span className="universe-hud__metadata-chip" key={item}>
+                  <span className="universe-hud__microcopy" key={item}>
                     {item}
                   </span>
                 ))}
@@ -175,10 +173,10 @@ export function UniverseHudOverlay({ section }: UniverseHudOverlayProps) {
               </div>
 
               <div className="universe-hud__vectorscope" aria-hidden="true">
+                <span className="universe-hud__vector-arc universe-hud__vector-arc--a" />
+                <span className="universe-hud__vector-arc universe-hud__vector-arc--b" />
                 <span className="universe-hud__vector universe-hud__vector--horizontal" />
                 <span className="universe-hud__vector universe-hud__vector--vertical" />
-                <span className="universe-hud__vector universe-hud__vector--diagonal-a" />
-                <span className="universe-hud__vector universe-hud__vector--diagonal-b" />
                 <span className="universe-hud__vector-core" />
               </div>
             </div>

@@ -193,7 +193,6 @@ export const ThreeJsUniverse = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const activeView = VIEWS[activeViewIndex];
   const isTrackballView = activeViewIndex === 2;
   const initialView = VIEWS[0];
   const hoveredSection = hoverState
@@ -298,9 +297,6 @@ export const ThreeJsUniverse = () => {
       />
       <UniverseHudOverlay section={hoveredSection} />
 
-      {activeView && (
-        <div className="universe-view-indicator">{activeView.label}</div>
-      )}
       <Loader />
     </div>
   );
