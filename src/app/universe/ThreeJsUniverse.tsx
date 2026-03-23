@@ -1,5 +1,13 @@
 "use client";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Bloom,
@@ -33,26 +41,6 @@ import {
 } from "@/data/universeSections";
 import { useRouter } from "next/navigation";
 
-const CODE_SNIPPETS = [
-  "const signal = await universe.boot({ target: 'shane.cranor.org' });",
-  "camera.position.lerp(desiredPos, 1 - Math.exp(-4 * delta));",
-  "if (hoveredComputer) overlay.tint = '#66ff99';",
-  "glitchBuffer.push(renderFrame({ phosphor: true, bloom: 0.9 }));",
-  `const wireframeMaterial = new THREE.MeshBasicMaterial({
-        color: wireframeColor,
-        wireframe: true,
-        transparent: true,
-        opacity: wireframeOpacity,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1,
-      })`,
-
-  "requestAnimationFrame(() => stars.rotateY(0.03 * delta));",
-];
-
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
 
@@ -82,33 +70,6 @@ function RotatingStars() {
   );
 }
 
-function CodeSnippetsOverlay({ active }: { active: boolean }) {
-  const snippetNodes = useMemo(() => {
-    return CODE_SNIPPETS.map((snippet, index) => ({
-      id: `${index}-${snippet}`,
-      snippet,
-      style: {
-        left: `${8 + (index % 4) * 22}%`,
-        top: `${12 + index * 10}%`,
-        animationDelay: `${index * 0.35}s`,
-        animationDuration: `${8 + (index % 3) * 2.5}s`,
-      },
-    }));
-  }, []);
-
-  return (
-    <div
-      className={`universe-code-overlay${active ? " is-active" : ""}`}
-      aria-hidden="true"
-    >
-      {snippetNodes.map(({ id, snippet, style }) => (
-        <pre className="universe-code-snippet" key={id} style={style}>
-          {snippet}
-        </pre>
-      ))}
-    </div>
-  );
-}
 // const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
 const EDGE_COLOR = [209, 109, 169];
 const SPHERE_GLOW_COLOR = [69, 49, 99];
@@ -238,7 +199,16 @@ export const ThreeJsUniverse = () => {
   const hoveredSection = hoverState
     ? UNIVERSE_SECTIONS[hoverState.sectionId]
     : null;
-  const isComputerHovered = hoverState?.sectionId === "projects";
+  const isTuning = Boolean(hoveredSection);
+  const shellStyle = useMemo(
+    () =>
+      ({
+        "--universe-wireframe-green": hoveredSection?.accent ?? "#73d1ad",
+        "--universe-wireframe-green-rgb":
+          hoveredSection?.accentRgb ?? "115, 209, 173",
+      }) as CSSProperties,
+    [hoveredSection],
+  );
 
   const handleSectionHoverStateChange = useCallback((
     sectionId: UniverseSectionId,
@@ -271,7 +241,8 @@ export const ThreeJsUniverse = () => {
 
   return (
     <div
-      className={`universe-shell${isComputerHovered ? " is-computer-hovered" : ""}`}
+      className={`universe-shell${isTuning ? " is-tuning" : ""}`}
+      style={shellStyle}
     >
       <Canvas
         camera={{ fov: 75, position: initialView.position }}
@@ -322,19 +293,13 @@ export const ThreeJsUniverse = () => {
       </Canvas>
 
       <div
-        className={`universe-phosphor-pass${isComputerHovered ? " is-active" : ""}`}
+        className={`universe-phosphor-pass${isTuning ? " is-active" : ""}`}
         aria-hidden="true"
       />
-      <CodeSnippetsOverlay active={isComputerHovered} />
       <UniverseHudOverlay section={hoveredSection} />
 
       {activeView && (
-        <div
-          className="universe-view-indicator"
-          style={{ position: "absolute", top: 20, left: 20, color: "white" }}
-        >
-          {`${activeView.label}`}
-        </div>
+        <div className="universe-view-indicator">{activeView.label}</div>
       )}
       <Loader />
     </div>

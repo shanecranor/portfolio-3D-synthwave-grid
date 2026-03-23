@@ -21,8 +21,8 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       description:
         "Framing quiet moments, neon nights, and texture-rich scenes with a cinematic eye.",
       tags: ["Mirrorless", "RAW Workflow", "Street", "Low Light"],
-      status: "Hover target locked",
-      actionLabel: "Click to enter archive",
+      status: "Archive steady",
+      actionLabel: "Open archive",
       href: "https://shane.cranor.org/photos",
       accent: "#ff86f7",
       accentRgb: "255, 134, 247",
@@ -34,8 +34,8 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       description:
         "Interactive builds, experimental interfaces, and full-stack systems tuned for clarity.",
       tags: ["React", "TypeScript", "R3F", "Full Stack"],
-      status: "Hover target locked",
-      actionLabel: "Click to enter lab",
+      status: "Signal tuned",
+      actionLabel: "Open channel",
       href: "/code",
       accent: "#73d1ad",
       accentRgb: "115, 209, 173",
@@ -46,11 +46,10 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       description:
         "Bass-driven songwriting, synth textures, and production work shaped by analog energy.",
       tags: ["Bass", "Synth", "Production", "Mixing"],
-      status: "Hover target locked",
-      actionLabel: "Click to enter signal",
+      status: "Playback rolling",
+      actionLabel: "Open playback",
       href: "/music",
       accent: "#73b4ff",
       accentRgb: "115, 180, 255",
     },
   };
-
