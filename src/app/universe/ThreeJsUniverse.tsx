@@ -34,7 +34,11 @@ import {
   UniverseReflexCamera,
   UNIVERSE_COMPUTER_MODEL_COUNT,
 } from "@/components/3D/UniverseComputer";
-import { UniverseHudOverlay } from "@/app/universe/UniverseHudOverlay";
+import {
+  HUD_FONT_OPTIONS,
+  type HudFontOption,
+  UniverseHudOverlay,
+} from "@/app/universe/UniverseHudOverlay";
 import {
   UNIVERSE_SECTIONS,
   type UniverseSectionId,
@@ -160,11 +164,17 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
+  const [hudFontOption, setHudFontOption] = useState<HudFontOption>("segment");
   const [hoverState, setHoverState] = useState<{
     sectionId: UniverseSectionId;
     focus: CameraHoverFocus;
   } | null>(null);
+  const [hudState, setHudState] = useState<{
+    sectionId: UniverseSectionId;
+    focus: CameraHoverFocus;
+  } | null>(null);
   const [isGlowVisible, setIsGlowVisible] = useState(true);
+  const hudExitTimeoutRef = useRef<number | undefined>(undefined);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -195,9 +205,18 @@ export const ThreeJsUniverse = () => {
 
   const isTrackballView = activeViewIndex === 2;
   const initialView = VIEWS[0];
+  useEffect(() => {
+    return () => {
+      if (hudExitTimeoutRef.current) {
+        window.clearTimeout(hudExitTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const hoveredSection = hoverState
     ? UNIVERSE_SECTIONS[hoverState.sectionId]
     : null;
+  const hudSection = hudState ? UNIVERSE_SECTIONS[hudState.sectionId] : null;
   const isTuning = Boolean(hoveredSection);
   const shellStyle = useMemo(
     () =>
@@ -209,34 +228,61 @@ export const ThreeJsUniverse = () => {
     [hoveredSection],
   );
 
-  const handleSectionHoverStateChange = useCallback((
-    sectionId: UniverseSectionId,
-    isHovered: boolean,
-    focus: CameraHoverFocus,
-  ) => {
-    setHoverState((current) => {
+  const handleSectionHoverStateChange = useCallback(
+    (
+      sectionId: UniverseSectionId,
+      isHovered: boolean,
+      focus: CameraHoverFocus,
+    ) => {
+      if (hudExitTimeoutRef.current) {
+        window.clearTimeout(hudExitTimeoutRef.current);
+        hudExitTimeoutRef.current = undefined;
+      }
+
+      setHoverState((current) => {
+        if (isHovered) {
+          return { sectionId, focus };
+        }
+
+        if (current?.sectionId !== sectionId) {
+          return current;
+        }
+
+        return null;
+      });
+
       if (isHovered) {
-        return { sectionId, focus };
+        setHudState({ sectionId, focus });
+        return;
       }
 
-      if (current?.sectionId !== sectionId) {
-        return current;
+      hudExitTimeoutRef.current = window.setTimeout(() => {
+        setHudState((current) => {
+          if (current?.sectionId !== sectionId) {
+            return current;
+          }
+
+          return null;
+        });
+        hudExitTimeoutRef.current = undefined;
+      }, 280);
+    },
+    [],
+  );
+
+  const handleSectionSelect = useCallback(
+    (sectionId: UniverseSectionId) => {
+      const section = UNIVERSE_SECTIONS[sectionId];
+
+      if (section.external) {
+        window.location.assign(section.href);
+        return;
       }
 
-      return null;
-    });
-  }, []);
-
-  const handleSectionSelect = useCallback((sectionId: UniverseSectionId) => {
-    const section = UNIVERSE_SECTIONS[sectionId];
-
-    if (section.external) {
-      window.location.assign(section.href);
-      return;
-    }
-
-    router.push(section.href);
-  }, [router]);
+      router.push(section.href);
+    },
+    [router],
+  );
 
   return (
     <div
@@ -289,13 +335,17 @@ export const ThreeJsUniverse = () => {
           cylinderMorph={cylinderMorph}
           glowColor={isGlowVisible ? sphereGlowColor : undefined}
         />
+        <UniverseHudOverlay
+          active={Boolean(hoverState)}
+          fontOption={hudFontOption}
+          section={hudSection}
+        />
       </Canvas>
 
       <div
         className={`universe-phosphor-pass${isTuning ? " is-active" : ""}`}
         aria-hidden="true"
       />
-      <UniverseHudOverlay section={hoveredSection} />
 
       <Loader />
     </div>
