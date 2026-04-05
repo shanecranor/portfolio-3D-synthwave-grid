@@ -45,6 +45,8 @@ import {
 } from "@/data/universeSections";
 import { useRouter } from "next/navigation";
 
+const NAVIGATION_SURGE_MS = 420;
+
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
 
@@ -164,7 +166,7 @@ export const ThreeJsUniverse = () => {
   );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
-  const [hudFontOption, setHudFontOption] = useState<HudFontOption>("segment");
+  const hudFontOption: HudFontOption = HUD_FONT_OPTIONS[0];
   const [hoverState, setHoverState] = useState<{
     sectionId: UniverseSectionId;
     focus: CameraHoverFocus;
@@ -175,6 +177,9 @@ export const ThreeJsUniverse = () => {
   } | null>(null);
   const [isGlowVisible, setIsGlowVisible] = useState(true);
   const hudExitTimeoutRef = useRef<number | undefined>(undefined);
+  const navigationTimeoutRef = useRef<number | undefined>(undefined);
+  const [surgingSectionId, setSurgingSectionId] =
+    useState<UniverseSectionId | null>(null);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -210,14 +215,17 @@ export const ThreeJsUniverse = () => {
       if (hudExitTimeoutRef.current) {
         window.clearTimeout(hudExitTimeoutRef.current);
       }
+      if (navigationTimeoutRef.current) {
+        window.clearTimeout(navigationTimeoutRef.current);
+      }
     };
   }, []);
 
-  const hoveredSection = hoverState
-    ? UNIVERSE_SECTIONS[hoverState.sectionId]
-    : null;
+  const activeSectionId = surgingSectionId ?? hoverState?.sectionId ?? null;
+  const hoveredSection = activeSectionId ? UNIVERSE_SECTIONS[activeSectionId] : null;
   const hudSection = hudState ? UNIVERSE_SECTIONS[hudState.sectionId] : null;
-  const isTuning = Boolean(hoveredSection);
+  const isTuning = Boolean(activeSectionId);
+  const isSurging = Boolean(surgingSectionId);
   const shellStyle = useMemo(
     () =>
       ({
@@ -234,6 +242,14 @@ export const ThreeJsUniverse = () => {
       isHovered: boolean,
       focus: CameraHoverFocus,
     ) => {
+      if (navigationTimeoutRef.current) {
+        return;
+      }
+
+      if (surgingSectionId === sectionId && !isHovered) {
+        return;
+      }
+
       if (hudExitTimeoutRef.current) {
         window.clearTimeout(hudExitTimeoutRef.current);
         hudExitTimeoutRef.current = undefined;
@@ -267,26 +283,42 @@ export const ThreeJsUniverse = () => {
         hudExitTimeoutRef.current = undefined;
       }, 280);
     },
-    [],
+    [surgingSectionId],
   );
 
   const handleSectionSelect = useCallback(
-    (sectionId: UniverseSectionId) => {
-      const section = UNIVERSE_SECTIONS[sectionId];
-
-      if (section.external) {
-        window.location.assign(section.href);
+    (sectionId: UniverseSectionId, focus: CameraHoverFocus) => {
+      if (navigationTimeoutRef.current) {
         return;
       }
 
-      router.push(section.href);
+      const section = UNIVERSE_SECTIONS[sectionId];
+      if (hudExitTimeoutRef.current) {
+        window.clearTimeout(hudExitTimeoutRef.current);
+        hudExitTimeoutRef.current = undefined;
+      }
+
+      setHoverState({ sectionId, focus });
+      setHudState({ sectionId, focus });
+      setSurgingSectionId(sectionId);
+
+      navigationTimeoutRef.current = window.setTimeout(() => {
+        navigationTimeoutRef.current = undefined;
+
+        if (section.external) {
+          window.location.assign(section.href);
+          return;
+        }
+
+        router.push(section.href);
+      }, NAVIGATION_SURGE_MS);
     },
     [router],
   );
 
   return (
     <div
-      className={`universe-shell${isTuning ? " is-tuning" : ""}`}
+      className={`universe-shell${isTuning ? " is-tuning" : ""}${isSurging ? " is-routing" : ""}`}
       style={shellStyle}
     >
       <Canvas
@@ -313,17 +345,23 @@ export const ThreeJsUniverse = () => {
           viewIndex={activeViewIndex}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
+          activeSectionId={activeSectionId}
+          surgingSectionId={surgingSectionId}
         />
         <UniverseComputer
           viewIndex={activeViewIndex}
           modelIndex={activeComputerIndex}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
+          activeSectionId={activeSectionId}
+          surgingSectionId={surgingSectionId}
         />
         <UniverseBass
           viewIndex={activeViewIndex}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
+          activeSectionId={activeSectionId}
+          surgingSectionId={surgingSectionId}
         />
         <UniverseBackdrop
           edgeColor={edgeColor}
@@ -336,14 +374,15 @@ export const ThreeJsUniverse = () => {
           glowColor={isGlowVisible ? sphereGlowColor : undefined}
         />
         <UniverseHudOverlay
-          active={Boolean(hoverState)}
+          active={Boolean(activeSectionId)}
           fontOption={hudFontOption}
           section={hudSection}
+          surging={isSurging}
         />
       </Canvas>
 
       <div
-        className={`universe-phosphor-pass${isTuning ? " is-active" : ""}`}
+        className={`universe-phosphor-pass${isTuning ? " is-active" : ""}${isSurging ? " is-surging" : ""}`}
         aria-hidden="true"
       />
 

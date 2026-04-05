@@ -32,6 +32,10 @@
   filter: saturate(1.05) contrast(1.03);
 }
 
+.universe-shell.is-routing {
+  filter: saturate(1.18) contrast(1.08) brightness(1.04);
+}
+
 .universe-phosphor-pass {
   position: absolute;
   inset: 0;
@@ -57,6 +61,11 @@
 .universe-phosphor-pass.is-active {
   opacity: 0.36;
   animation: universe-phosphor-flicker 3.6s steps(7, end) infinite;
+}
+
+.universe-phosphor-pass.is-surging {
+  opacity: 0.54;
+  animation-duration: 1.2s;
 }
 
 @keyframes universe-phosphor-flicker {

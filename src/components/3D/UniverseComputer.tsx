@@ -19,31 +19,37 @@ type UniverseComputerProps = {
   modelIndex: number;
   targetSize?: number;
   onHoverStateChange?: (
-    sectionId: UniverseSectionId,
-    isHovered: boolean,
-    focus: CameraHoverFocus,
-  ) => void;
-  onSelect?: (sectionId: UniverseSectionId) => void;
+      sectionId: UniverseSectionId,
+      isHovered: boolean,
+      focus: CameraHoverFocus,
+    ) => void;
+  onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
+  activeSectionId?: UniverseSectionId | null;
+  surgingSectionId?: UniverseSectionId | null;
 };
 
 type UniverseBassProps = {
   viewIndex: number;
   onHoverStateChange?: (
-    sectionId: UniverseSectionId,
-    isHovered: boolean,
-    focus: CameraHoverFocus,
-  ) => void;
-  onSelect?: (sectionId: UniverseSectionId) => void;
+      sectionId: UniverseSectionId,
+      isHovered: boolean,
+      focus: CameraHoverFocus,
+    ) => void;
+  onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
+  activeSectionId?: UniverseSectionId | null;
+  surgingSectionId?: UniverseSectionId | null;
 };
 
 type UniverseReflexCameraProps = {
   viewIndex: number;
   onHoverStateChange?: (
-    sectionId: UniverseSectionId,
-    isHovered: boolean,
-    focus: CameraHoverFocus,
-  ) => void;
-  onSelect?: (sectionId: UniverseSectionId) => void;
+      sectionId: UniverseSectionId,
+      isHovered: boolean,
+      focus: CameraHoverFocus,
+    ) => void;
+  onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
+  activeSectionId?: UniverseSectionId | null;
+  surgingSectionId?: UniverseSectionId | null;
 };
 
 type AnchoredPlacementConfig = {
@@ -69,8 +75,13 @@ type UniverseAnchoredObjectProps = {
     isHovered: boolean,
     focus: CameraHoverFocus,
   ) => void;
-  onSelect?: (sectionId: UniverseSectionId) => void;
-  children: (state: { isHovered: boolean }) => ReactNode;
+  onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
+  isForcedActive?: boolean;
+  isSurging?: boolean;
+  children: (state: {
+    isHighlighted: boolean;
+    isSurging: boolean;
+  }) => ReactNode;
 };
 
 type WireframeModelConfig = {
@@ -79,7 +90,8 @@ type WireframeModelConfig = {
   fillColor?: THREE.ColorRepresentation;
   wireframeColor?: THREE.ColorRepresentation;
   wireframeOpacity?: number;
-  isHovered?: boolean;
+  isHighlighted?: boolean;
+  isSurging?: boolean;
   hoverWireframeOpacityMultiplier?: number;
 };
 
@@ -173,12 +185,17 @@ function WireframeModel({
   fillColor = BLACK_FILL_COLOR,
   wireframeColor = GREEN_WIREFRAME_COLOR,
   wireframeOpacity = 0.95,
-  isHovered = false,
+  isHighlighted = false,
+  isSurging = false,
   hoverWireframeOpacityMultiplier = 5,
 }: WireframeModelConfig) {
   const { scene } = useGLTF(path);
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const highlightRef = useRef(isHighlighted ? 1 : 0);
+  const highlightVelocityRef = useRef(0);
+  const surgeRef = useRef(isSurging ? 1 : 0);
+  const surgeVelocityRef = useRef(0);
   const opacityRef = useRef(wireframeOpacity);
   const opacityVelocityRef = useRef(0);
 
@@ -244,8 +261,33 @@ function WireframeModel({
     const wireframeMaterial = wireframeMaterialRef.current;
     if (!wireframeMaterial) return;
 
+    const highlightSpring = stepDampedSpring(
+      highlightRef.current,
+      highlightVelocityRef.current,
+      isHighlighted ? 1 : 0,
+      delta,
+      HOVER_SPRING_FREQUENCY,
+      HOVER_SPRING_DAMPING,
+    );
+    highlightRef.current = highlightSpring.value;
+    highlightVelocityRef.current = highlightSpring.velocity;
+
+    const surgeSpring = stepDampedSpring(
+      surgeRef.current,
+      surgeVelocityRef.current,
+      isSurging ? 1 : 0,
+      delta,
+      HOVER_SPRING_FREQUENCY,
+      HOVER_SPRING_DAMPING,
+    );
+    surgeRef.current = surgeSpring.value;
+    surgeVelocityRef.current = surgeSpring.velocity;
+
     const targetOpacity =
-      wireframeOpacity * (isHovered ? hoverWireframeOpacityMultiplier : 1);
+      wireframeOpacity *
+      (1 +
+        highlightRef.current * (hoverWireframeOpacityMultiplier - 1) +
+        surgeRef.current * 2.25);
     const opacitySpring = stepDampedSpring(
       opacityRef.current,
       opacityVelocityRef.current,
@@ -276,6 +318,8 @@ function UniverseAnchoredObject({
   hitbox,
   onHoverStateChange,
   onSelect,
+  isForcedActive = false,
+  isSurging = false,
   children,
 }: UniverseAnchoredObjectProps) {
   const canvasSize = useThree((state) => state.size);
@@ -283,10 +327,13 @@ function UniverseAnchoredObject({
   const modelRef = useRef<THREE.Group>(null);
   const hoverScaleRef = useRef(1);
   const hoverVelocityRef = useRef(0);
+  const surgeScaleRef = useRef(isSurging ? 1 : 0);
+  const surgeVelocityRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const isDefaultView = viewIndex === 0 || true;
   const isActivelyHovered = isDefaultView && isHovered;
+  const isHighlighted = isActivelyHovered || isForcedActive;
 
   const responsiveScale = useMemo(() => {
     const minScale = 0.12;
@@ -348,7 +395,7 @@ function UniverseAnchoredObject({
       (placement.rotationZ ?? 0) + elapsed * (placement.spinZ ?? 0),
     );
 
-    const targetObjectScale = isActivelyHovered ? hoverScale : 1;
+    const targetObjectScale = isHighlighted ? hoverScale : 1;
     const hoverSpring = stepDampedSpring(
       hoverScaleRef.current,
       hoverVelocityRef.current,
@@ -360,7 +407,21 @@ function UniverseAnchoredObject({
 
     hoverScaleRef.current = hoverSpring.value;
     hoverVelocityRef.current = hoverSpring.velocity;
-    anchor.scale.setScalar(responsiveScale * hoverScaleRef.current);
+
+    const surgeSpring = stepDampedSpring(
+      surgeScaleRef.current,
+      surgeVelocityRef.current,
+      isSurging ? 1 : 0,
+      delta,
+      HOVER_SPRING_FREQUENCY,
+      HOVER_SPRING_DAMPING,
+    );
+
+    surgeScaleRef.current = surgeSpring.value;
+    surgeVelocityRef.current = surgeSpring.velocity;
+    anchor.scale.setScalar(
+      responsiveScale * hoverScaleRef.current * (1 + surgeScaleRef.current * 0.18),
+    );
   });
 
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
@@ -377,7 +438,7 @@ function UniverseAnchoredObject({
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
-    onSelect?.(sectionId);
+    onSelect?.(sectionId, hoverFocus);
   };
 
   return (
@@ -401,7 +462,7 @@ function UniverseAnchoredObject({
             />
           </mesh>
         ) : null}
-        {children({ isHovered: isActivelyHovered })}
+        {children({ isHighlighted, isSurging })}
       </group>
     </group>
   );
@@ -411,6 +472,8 @@ export function UniverseReflexCamera({
   viewIndex,
   onHoverStateChange,
   onSelect,
+  activeSectionId,
+  surgingSectionId,
 }: UniverseReflexCameraProps) {
   return (
     <UniverseAnchoredObject
@@ -420,15 +483,18 @@ export function UniverseReflexCamera({
       hitbox={REFLEX_CAMERA_HITBOX}
       onHoverStateChange={onHoverStateChange}
       onSelect={onSelect}
+      isForcedActive={activeSectionId === "photography"}
+      isSurging={surgingSectionId === "photography"}
     >
-      {({ isHovered }) => (
+      {({ isHighlighted, isSurging: isItemSurging }) => (
         <WireframeModel
           path={REFLEX_CAMERA_MODEL_PATH}
           targetSize={2.5}
           fillColor={CAMERA_FILL_COLOR}
           wireframeColor={CAMERA_WIREFRAME_COLOR}
           wireframeOpacity={0.08}
-          isHovered={isHovered}
+          isHighlighted={isHighlighted}
+          isSurging={isItemSurging}
         />
       )}
     </UniverseAnchoredObject>
@@ -441,6 +507,8 @@ export function UniverseComputer({
   targetSize = 3.6,
   onHoverStateChange,
   onSelect,
+  activeSectionId,
+  surgingSectionId,
 }: UniverseComputerProps) {
   const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
 
@@ -452,15 +520,18 @@ export function UniverseComputer({
       hitbox={COMPUTER_HITBOX}
       onHoverStateChange={onHoverStateChange}
       onSelect={onSelect}
+      isForcedActive={activeSectionId === "projects"}
+      isSurging={surgingSectionId === "projects"}
     >
-      {({ isHovered }) => (
+      {({ isHighlighted, isSurging: isItemSurging }) => (
         <WireframeModel
           path={activeModelPath}
           targetSize={targetSize}
           fillColor={BLACK_FILL_COLOR}
           wireframeColor={GREEN_WIREFRAME_COLOR}
           wireframeOpacity={0.12}
-          isHovered={isHovered}
+          isHighlighted={isHighlighted}
+          isSurging={isItemSurging}
         />
       )}
     </UniverseAnchoredObject>
@@ -471,6 +542,8 @@ export function UniverseBass({
   viewIndex,
   onHoverStateChange,
   onSelect,
+  activeSectionId,
+  surgingSectionId,
 }: UniverseBassProps) {
   return (
     <UniverseAnchoredObject
@@ -481,15 +554,18 @@ export function UniverseBass({
       hitbox={BASS_HITBOX}
       onHoverStateChange={onHoverStateChange}
       onSelect={onSelect}
+      isForcedActive={activeSectionId === "music"}
+      isSurging={surgingSectionId === "music"}
     >
-      {({ isHovered }) => (
+      {({ isHighlighted, isSurging: isItemSurging }) => (
         <WireframeModel
           path={BASS_MODEL_PATH}
           targetSize={4.6}
           fillColor={BASS_FILL_COLOR}
           wireframeColor={BLUE_WIREFRAME_COLOR}
           wireframeOpacity={0.12}
-          isHovered={isHovered}
+          isHighlighted={isHighlighted}
+          isSurging={isItemSurging}
         />
       )}
     </UniverseAnchoredObject>
