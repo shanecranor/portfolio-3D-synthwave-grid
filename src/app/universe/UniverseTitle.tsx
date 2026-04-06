@@ -140,7 +140,7 @@ export const UniverseTitle = ({
       curveSegments: 32,
       bevelEnabled: true,
       bevelThickness: 0.05,
-      bevelSize: 0.02,
+      bevelSize: 0.12,
       bevelOffset: 0,
       bevelSegments: 5,
     }),
@@ -324,11 +324,14 @@ export const UniverseTitle = ({
       <Center ref={centerRef}>
         <mesh geometry={textGeometry}>
           {/* <meshBasicMaterial color="black" /> */}
-          <meshStandardMaterial
-            color="white"
+          <meshPhysicalMaterial
+            color="#fdf8ff"
             metalness={1}
-            roughness={0}
-            envMapIntensity={2.2}
+            roughness={0.04}
+            clearcoat={1}
+            clearcoatRoughness={0.03}
+            reflectivity={1}
+            envMapIntensity={1.4}
             envMap={envMap ?? undefined}
           />
         </mesh>
