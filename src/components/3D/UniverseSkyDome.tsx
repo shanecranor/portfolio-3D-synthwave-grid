@@ -45,7 +45,8 @@ void main() {
     1.0 - min(abs(direction.y - HORIZON_GLOW_CENTER_Y) * HORIZON_GLOW_FALLOFF, 1.0),
     4.0
   ) * pow (
-    1.0 - min(abs(direction.x - 0.1) * 2.4, 4.0 )
+    1.0 - min(abs(direction.x - 0.1) * 0.2, 1.0),
+    1.5
   );
 
   // Add the brighter horizon bloom to finish the synthwave look.

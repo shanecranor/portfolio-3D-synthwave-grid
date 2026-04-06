@@ -1,6 +1,7 @@
 "use client";
 import {
   memo,
+  type RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -8,7 +9,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Bloom,
   BrightnessContrast,
@@ -44,9 +45,24 @@ import {
   UNIVERSE_SECTIONS,
   type UniverseSectionId,
 } from "@/data/universeSections";
+import {
+  DEFAULT_UNIVERSE_ANCHOR_Y,
+  DEFAULT_UNIVERSE_ANCHOR_Z,
+  DEFAULT_UNIVERSE_TITLE_SCALE,
+  getUniverseTitleAnchorX,
+} from "@/components/3D/universeLayout";
 import { useRouter } from "next/navigation";
 
 const NAVIGATION_SURGE_MS = 420;
+
+function setObjectVisibility(
+  object: THREE.Object3D | null | undefined,
+  visible: boolean,
+) {
+  if (object) {
+    object.visible = visible;
+  }
+}
 
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
@@ -75,6 +91,66 @@ function RotatingStars() {
       />
     </group>
   );
+}
+
+function LiveEnvironmentMap({
+  onEnvMapReady,
+  excludedRef,
+  textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
+}: {
+  onEnvMapReady: (texture: THREE.Texture | null) => void;
+  excludedRef?: RefObject<THREE.Object3D | null>;
+  textScale?: number;
+}) {
+  const { gl, scene, size } = useThree();
+  const cubeCameraRef = useRef<THREE.CubeCamera | null>(null);
+  const capturePosition = useMemo(
+    () =>
+      new THREE.Vector3(
+        getUniverseTitleAnchorX(size.width, textScale),
+        DEFAULT_UNIVERSE_ANCHOR_Y,
+        DEFAULT_UNIVERSE_ANCHOR_Z,
+      ),
+    [size.width, textScale],
+  );
+  const renderTarget = useMemo(() => {
+    const target = new THREE.WebGLCubeRenderTarget(256, {
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+    });
+    target.texture.type = THREE.HalfFloatType;
+    target.texture.mapping = THREE.CubeReflectionMapping;
+    return target;
+  }, []);
+
+  useEffect(() => {
+    const cubeCamera = new THREE.CubeCamera(0.1, 500, renderTarget);
+    cubeCamera.position.copy(capturePosition);
+    cubeCameraRef.current = cubeCamera;
+    scene.add(cubeCamera);
+    onEnvMapReady(renderTarget.texture);
+
+    return () => {
+      onEnvMapReady(null);
+      scene.remove(cubeCamera);
+      cubeCameraRef.current = null;
+      renderTarget.dispose();
+    };
+  }, [capturePosition, onEnvMapReady, renderTarget, scene]);
+
+  useFrame(() => {
+    const cubeCamera = cubeCameraRef.current;
+    const excludedObject = excludedRef?.current;
+    if (!cubeCamera) return;
+    const previousVisibility = excludedObject?.visible;
+
+    setObjectVisibility(excludedObject, false);
+    cubeCamera.position.copy(capturePosition);
+    cubeCamera.update(gl, scene);
+    setObjectVisibility(excludedObject, previousVisibility ?? true);
+  });
+
+  return null;
 }
 
 // const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
@@ -182,6 +258,10 @@ export const ThreeJsUniverse = () => {
   const navigationTimeoutRef = useRef<number | undefined>(undefined);
   const [surgingSectionId, setSurgingSectionId] =
     useState<UniverseSectionId | null>(null);
+  const titleGroupRef = useRef<THREE.Group | null>(null);
+  const [environmentMap, setEnvironmentMap] = useState<THREE.Texture | null>(
+    null,
+  );
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -331,6 +411,10 @@ export const ThreeJsUniverse = () => {
         gl={{ alpha: false }}
       >
         <color attach="background" args={["#02040a"]} />
+        <LiveEnvironmentMap
+          onEnvMapReady={setEnvironmentMap}
+          excludedRef={titleGroupRef}
+        />
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
@@ -344,7 +428,11 @@ export const ThreeJsUniverse = () => {
             dynamicDampingFactor={0.15}
           />
         )}
-        <UniverseTitle viewIndex={activeViewIndex} />
+        <UniverseTitle
+          viewIndex={activeViewIndex}
+          envMap={environmentMap}
+          groupRef={titleGroupRef}
+        />
         <UniverseReflexCamera
           viewIndex={activeViewIndex}
           onHoverStateChange={handleSectionHoverStateChange}

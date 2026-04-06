@@ -1,7 +1,13 @@
 "use client";
 
 import * as THREE from "three";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 import type { Line2, LineMaterial } from "three-stdlib";
@@ -94,11 +100,15 @@ const AnimatedDashLine = ({
 type UniverseTitleProps = {
   viewIndex: number;
   textScale?: number;
+  envMap?: THREE.Texture | null;
+  groupRef?: MutableRefObject<THREE.Group | null>;
 };
 
 export const UniverseTitle = ({
   viewIndex,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
+  envMap = null,
+  groupRef,
 }: UniverseTitleProps) => {
   const browserWidth = useThree((state) => state.size.width);
   const rootRef = useRef<THREE.Group>(null);
@@ -301,13 +311,28 @@ export const UniverseTitle = ({
     };
   }, [hitboxGeometry, textGeometry]);
 
+  const setRootRef = (node: THREE.Group | null) => {
+    rootRef.current = node;
+
+    if (groupRef) {
+      groupRef.current = node;
+    }
+  };
+
   return (
-    <group ref={rootRef}>
+    <group ref={setRootRef}>
       <Center ref={centerRef}>
         <mesh geometry={textGeometry}>
-          <meshBasicMaterial color="black" />
+          {/* <meshBasicMaterial color="black" /> */}
+          <meshStandardMaterial
+            color="white"
+            metalness={1}
+            roughness={0}
+            envMapIntensity={2.2}
+            envMap={envMap ?? undefined}
+          />
         </mesh>
-        {showTransmissionMaterial && (
+        {/* {showTransmissionMaterial && (
           <mesh geometry={textGeometry} renderOrder={1}>
             <MeshTransmissionMaterial
               ref={transmissionMaterialRef}
@@ -328,7 +353,7 @@ export const UniverseTitle = ({
               emissive={[0, 0, 0]}
             />
           </mesh>
-        )}
+        )} */}
         <mesh
           geometry={hitboxGeometry}
           position={hitboxPosition}
@@ -339,80 +364,87 @@ export const UniverseTitle = ({
         >
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
-
-        {/* animated outlines */}
-        {/* MAIN THICK LINES */}
-        <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
-          {shapes.map((shape, shapeIndex) => (
-            <group key={shapeIndex}>
-              <AnimatedDashLine
-                shape={shape}
-                color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
-                thickness={2}
-                speed={0.1}
-                gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
-              />
-              {shape.holes.map((hole, holeIndex) => (
-                <AnimatedDashLine
-                  key={holeIndex}
-                  shape={hole}
-                  color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
-                  thickness={2}
-                  speed={0.1}
-                  gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
-                />
+        {false && (
+          <>
+            {/* animated outlines */}
+            {/* MAIN THICK LINES */}
+            <group
+              position={[0, 0, config.depth + config.bevelThickness + 0.01]}
+            >
+              {shapes.map((shape, shapeIndex) => (
+                <group key={shapeIndex}>
+                  <AnimatedDashLine
+                    shape={shape}
+                    color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
+                    thickness={2}
+                    speed={0.1}
+                    gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
+                  />
+                  {shape.holes.map((hole, holeIndex) => (
+                    <AnimatedDashLine
+                      key={holeIndex}
+                      shape={hole}
+                      color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
+                      thickness={2}
+                      speed={0.1}
+                      gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
+                    />
+                  ))}
+                </group>
               ))}
             </group>
-          ))}
-        </group>
-        {/* SECONDARY ALWAYS ON LINES */}
-        <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
-          {shapes.map((shape, shapeIndex) => (
-            <group key={shapeIndex}>
-              <AnimatedDashLine
-                shape={shape}
-                color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
-                thickness={0.4}
-                gapSize={0}
-              />
-              {shape.holes.map((hole, holeIndex) => (
-                <AnimatedDashLine
-                  key={holeIndex}
-                  shape={hole}
-                  color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
-                  thickness={0.4}
-                  gapSize={0}
-                />
+            {/* SECONDARY ALWAYS ON LINES */}
+            <group
+              position={[0, 0, config.depth + config.bevelThickness + 0.01]}
+            >
+              {shapes.map((shape, shapeIndex) => (
+                <group key={shapeIndex}>
+                  <AnimatedDashLine
+                    shape={shape}
+                    color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
+                    thickness={0.4}
+                    gapSize={0}
+                  />
+                  {shape.holes.map((hole, holeIndex) => (
+                    <AnimatedDashLine
+                      key={holeIndex}
+                      shape={hole}
+                      color={UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR}
+                      thickness={0.4}
+                      gapSize={0}
+                    />
+                  ))}
+                </group>
               ))}
             </group>
-          ))}
-        </group>
-        {/* REAR LINES */}
-        <group position={[0, 0, -1 * (config.bevelThickness + 0.01)]}>
-          {shapes.map((shape, shapeIndex) => (
-            <group key={shapeIndex}>
-              <AnimatedDashLine
-                shape={shape}
-                color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
-                thickness={1}
-                speed={0.05}
-                dashSize={0.3}
-                gapSize={0}
-              />
-              {shape.holes.map((hole, holeIndex) => (
-                <AnimatedDashLine
-                  key={holeIndex}
-                  shape={hole}
-                  color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
-                  thickness={1}
-                  speed={0.5}
-                  dashSize={1}
-                  gapSize={0}
-                />
+            {/* REAR LINES */}
+            <group position={[0, 0, -1 * (config.bevelThickness + 0.01)]}>
+              {shapes.map((shape, shapeIndex) => (
+                <group key={shapeIndex}>
+                  <AnimatedDashLine
+                    shape={shape}
+                    color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
+                    thickness={1}
+                    speed={0.05}
+                    dashSize={0.3}
+                    gapSize={0}
+                  />
+                  {shape.holes.map((hole, holeIndex) => (
+                    <AnimatedDashLine
+                      key={holeIndex}
+                      shape={hole}
+                      color={UNIVERSE_TITLE_OUTLINE_BACK_COLOR}
+                      thickness={1}
+                      speed={0.5}
+                      dashSize={1}
+                      gapSize={0}
+                    />
+                  ))}
+                </group>
               ))}
             </group>
-          ))}
-        </group>
+          </>
+        )}
       </Center>
     </group>
   );
