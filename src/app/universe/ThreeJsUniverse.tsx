@@ -22,6 +22,7 @@ import { BlendFunction } from "postprocessing";
 import { Detailed, Loader, Stars, TrackballControls } from "@react-three/drei";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { GlowSphere } from "@/components/3D/GlowSphere";
+import { UniverseSkyDome } from "@/components/3D/UniverseSkyDome";
 import {
   CameraRig,
   type CameraHoverFocus,
@@ -101,6 +102,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
 }) {
   return (
     <>
+      <UniverseSkyDome />
       <Detailed distances={[3, 25]}>
         <NoisySphere
           radius={10}
@@ -142,7 +144,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         />
         <Noise opacity={0.01} />
         <Vignette
-          offset={0.4}
+          offset={0.1}
           darkness={0.6}
           blendFunction={BlendFunction.DARKEN}
         />
@@ -222,7 +224,9 @@ export const ThreeJsUniverse = () => {
   }, []);
 
   const activeSectionId = surgingSectionId ?? hoverState?.sectionId ?? null;
-  const hoveredSection = activeSectionId ? UNIVERSE_SECTIONS[activeSectionId] : null;
+  const hoveredSection = activeSectionId
+    ? UNIVERSE_SECTIONS[activeSectionId]
+    : null;
   const hudSection = hudState ? UNIVERSE_SECTIONS[hudState.sectionId] : null;
   const isTuning = Boolean(activeSectionId);
   const isSurging = Boolean(surgingSectionId);
@@ -326,7 +330,7 @@ export const ThreeJsUniverse = () => {
         dpr={[1 / 2, 1]}
         gl={{ alpha: false }}
       >
-        <color attach="background" args={["black"]} />
+        <color attach="background" args={["#02040a"]} />
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
