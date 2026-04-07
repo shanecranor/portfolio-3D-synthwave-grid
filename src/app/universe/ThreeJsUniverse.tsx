@@ -8,7 +8,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Bloom,
   BrightnessContrast,
@@ -75,113 +75,6 @@ function RotatingStars() {
       />
     </group>
   );
-}
-
-function createSynthwaveEnvironmentCanvas() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) {
-    return canvas;
-  }
-
-  const { width, height } = canvas;
-  const skyEnd = height * 0.5;
-  const dividerY = height * 0.51;
-
-  const skyGradient = ctx.createLinearGradient(0, 0, 0, skyEnd);
-  skyGradient.addColorStop(0, "#225dff");
-  // skyGradient.addColorStop(0.2, "#3f67ff");
-  skyGradient.addColorStop(0.85, "#7684ff");
-  skyGradient.addColorStop(0.98, "#fff8ff");
-  skyGradient.addColorStop(1, "#fffefe");
-  ctx.fillStyle = skyGradient;
-  ctx.fillRect(0, 0, width, skyEnd);
-
-  const skyBloom = ctx.createLinearGradient(0, skyEnd * 0.78, 0, skyEnd);
-  skyBloom.addColorStop(0, "rgba(255, 255, 255, 0)");
-  skyBloom.addColorStop(1, "rgba(255, 255, 255, 0.2)");
-  ctx.fillStyle = skyBloom;
-  ctx.fillRect(0, skyEnd * 0.78, width, skyEnd * 0.22);
-
-  ctx.fillStyle = "#1e001e";
-  ctx.fillRect(0, skyEnd, width, Math.max(2, height * 0.01));
-
-  const groundGradient = ctx.createLinearGradient(0, dividerY, 0, height);
-  groundGradient.addColorStop(0, "#1e001e");
-  groundGradient.addColorStop(0.18, "#ff05ff");
-  groundGradient.addColorStop(0.7, "#ff6df6");
-  groundGradient.addColorStop(0.9, "#fff7ff");
-  groundGradient.addColorStop(1, "#ffffff");
-  ctx.fillStyle = groundGradient;
-  ctx.fillRect(0, dividerY, width, height - dividerY);
-
-  const groundBloom = ctx.createLinearGradient(0, dividerY, 0, height);
-  groundBloom.addColorStop(0, "rgba(255, 255, 255, 0.02)");
-  groundBloom.addColorStop(0.2, "rgba(255, 120, 242, 0.18)");
-  groundBloom.addColorStop(0.82, "rgba(255, 255, 255, 0.2)");
-  groundBloom.addColorStop(1, "rgba(255, 255, 255, 0.32)");
-  ctx.fillStyle = groundBloom;
-  ctx.fillRect(0, dividerY, width, height - dividerY);
-
-  const topRim = ctx.createLinearGradient(0, 0, 0, height * 0.14);
-  topRim.addColorStop(0, "rgba(174, 222, 255, 0.48)");
-  topRim.addColorStop(1, "rgba(174, 222, 255, 0)");
-  ctx.fillStyle = topRim;
-  ctx.fillRect(0, 0, width, height * 0.18);
-
-  for (let i = 0; i < 12; i += 1) {
-    const y = height * (0.12 + i * 0.028);
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.018 - i * 0.0008})`;
-    ctx.fillRect(0, y, width, Math.max(1, height * 0.0022));
-  }
-
-  for (let i = 0; i < 12; i += 1) {
-    const y = dividerY + height * (0.035 + i * 0.03);
-    ctx.fillStyle = `rgba(255, 235, 255, ${0.14 - i * 0.008})`;
-    ctx.fillRect(0, y, width, Math.max(1, height * 0.0045));
-  }
-
-  return canvas;
-}
-
-function SynthwaveEnvironmentMap({
-  onEnvMapReady,
-  onPreviewImageReady,
-}: {
-  onEnvMapReady: (texture: THREE.Texture | null) => void;
-  onPreviewImageReady?: (dataUrl: string | null) => void;
-}) {
-  const { gl } = useThree();
-
-  useEffect(() => {
-    const canvas = createSynthwaveEnvironmentCanvas();
-    onPreviewImageReady?.(canvas.toDataURL("image/png"));
-    const sourceTexture = new THREE.CanvasTexture(canvas);
-    sourceTexture.colorSpace = THREE.SRGBColorSpace;
-    sourceTexture.mapping = THREE.EquirectangularReflectionMapping;
-    sourceTexture.needsUpdate = true;
-
-    const pmremGenerator = new THREE.PMREMGenerator(gl);
-    pmremGenerator.compileEquirectangularShader();
-    const renderTarget = pmremGenerator.fromEquirectangular(sourceTexture);
-    const envMap = renderTarget.texture;
-    envMap.colorSpace = THREE.SRGBColorSpace;
-
-    onEnvMapReady(envMap);
-
-    return () => {
-      onEnvMapReady(null);
-      onPreviewImageReady?.(null);
-      sourceTexture.dispose();
-      renderTarget.dispose();
-      pmremGenerator.dispose();
-    };
-  }, [gl, onEnvMapReady, onPreviewImageReady]);
-
-  return null;
 }
 
 // const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
@@ -289,14 +182,6 @@ export const ThreeJsUniverse = () => {
   const navigationTimeoutRef = useRef<number | undefined>(undefined);
   const [surgingSectionId, setSurgingSectionId] =
     useState<UniverseSectionId | null>(null);
-  const [environmentMap, setEnvironmentMap] = useState<THREE.Texture | null>(
-    null,
-  );
-  const [environmentPreviewUrl, setEnvironmentPreviewUrl] = useState<
-    string | null
-  >(null);
-  const [isEnvironmentPreviewVisible, setIsEnvironmentPreviewVisible] =
-    useState(false);
   const noiseAmount = 0.3;
   const displaceYScale = 0.0;
   const poleNoiseFloor = 0.0;
@@ -319,10 +204,6 @@ export const ThreeJsUniverse = () => {
       if (event.code === "KeyG") {
         event.preventDefault();
         setIsGlowVisible((current) => !current);
-      }
-      if (event.code === "KeyQ") {
-        event.preventDefault();
-        setIsEnvironmentPreviewVisible((current) => !current);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -441,7 +322,7 @@ export const ThreeJsUniverse = () => {
 
   return (
     <div
-      className={`universe-shell${isTuning ? " is-tuning" : ""}${isSurging ? " is-routing" : ""}${isEnvironmentPreviewVisible ? " is-env-preview" : ""}`}
+      className={`universe-shell${isTuning ? " is-tuning" : ""}${isSurging ? " is-routing" : ""}`}
       style={shellStyle}
     >
       <Canvas
@@ -450,10 +331,6 @@ export const ThreeJsUniverse = () => {
         gl={{ alpha: false }}
       >
         <color attach="background" args={["#02040a"]} />
-        <SynthwaveEnvironmentMap
-          onEnvMapReady={setEnvironmentMap}
-          onPreviewImageReady={setEnvironmentPreviewUrl}
-        />
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
@@ -467,7 +344,7 @@ export const ThreeJsUniverse = () => {
             dynamicDampingFactor={0.15}
           />
         )}
-        <UniverseTitle viewIndex={activeViewIndex} envMap={environmentMap} />
+        <UniverseTitle viewIndex={activeViewIndex} />
         <UniverseReflexCamera
           viewIndex={activeViewIndex}
           onHoverStateChange={handleSectionHoverStateChange}
@@ -512,16 +389,6 @@ export const ThreeJsUniverse = () => {
         className={`universe-phosphor-pass${isTuning ? " is-active" : ""}${isSurging ? " is-surging" : ""}`}
         aria-hidden="true"
       />
-
-      {isEnvironmentPreviewVisible && environmentPreviewUrl && (
-        <div className="universe-env-preview" aria-live="polite">
-          <div className="universe-env-preview__label">ENV MAP PREVIEW · Q</div>
-          <div
-            className="universe-env-preview__image"
-            style={{ backgroundImage: `url("${environmentPreviewUrl}")` }}
-          />
-        </div>
-      )}
 
       <Loader />
     </div>

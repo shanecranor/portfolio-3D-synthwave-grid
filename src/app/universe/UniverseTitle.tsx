@@ -1,22 +1,11 @@
 "use client";
 
 import * as THREE from "three";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MutableRefObject,
-} from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 import type { Line2, LineMaterial } from "three-stdlib";
-import {
-  MeshTransmissionMaterial,
-  Line,
-  Center,
-  useFont,
-} from "@react-three/drei";
+import { Line, Center, useFont } from "@react-three/drei";
 import {
   DEFAULT_UNIVERSE_TITLE_SCALE,
   DEFAULT_UNIVERSE_ANCHOR_Y,
@@ -25,18 +14,121 @@ import {
   getUniverseTitleScale,
 } from "@/components/3D/universeLayout";
 
-const UNIVERSE_TITLE_COLOR = "#ffffff";
 const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [88, 94, 195].map((c) => c / 100);
 const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = [0.1, 0.1, 0.1] as const;
 const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [88, 94, 195].map((c) => c / 100);
 const TITLE_HITBOX_PADDING_X = 0.8;
 const TITLE_HITBOX_PADDING_Y = 0.8;
 const TITLE_HITBOX_PADDING_Z = 0.8;
-const TITLE_MATERIAL_FADE_SPEED = 10;
-const TITLE_MATERIAL_FADE_EPSILON = 0.01;
-const TITLE_POINTER_SPEED_MIN = 120;
-const TITLE_POINTER_SPEED_MAX = 1600;
-const TITLE_POINTER_STRENGTH_DECAY_SPEED = 2.5;
+
+const synthwaveChromeVertexShader = `
+varying vec3 vObjectPosition;
+varying vec3 vObjectNormal;
+varying vec3 vWorldNormal;
+varying vec3 vViewDirection;
+
+void main() {
+  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+  vObjectPosition = position;
+  vObjectNormal = normalize(normal);
+  vWorldNormal = normalize(mat3(modelMatrix) * normal);
+  vViewDirection = normalize(cameraPosition - worldPosition.xyz);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const synthwaveChromeFragmentShader = `
+uniform float uTime;
+uniform float uBoundsMinY;
+uniform float uBoundsMaxY;
+
+varying vec3 vObjectPosition;
+varying vec3 vObjectNormal;
+varying vec3 vWorldNormal;
+varying vec3 vViewDirection;
+
+float inverseLerp(float a, float b, float value) {
+  return clamp((value - a) / (b - a), 0.0, 1.0);
+}
+
+vec3 gradientFromTop(float t) {
+  vec3 deepBlue = vec3(0.03, 0.1, 0.38);
+  vec3 electricBlue = vec3(0.16, 0.39, 1.0);
+  vec3 paleBlue = vec3(0.58, 0.72, 1.0);
+  vec3 skyWhite = vec3(0.99, 0.98, 1.0);
+  vec3 divider = vec3(0.07, 0.0, 0.09);
+  vec3 magenta = vec3(0.98, 0.02, 0.9);
+  vec3 pink = vec3(1.0, 0.42, 0.95);
+  vec3 lowerWhite = vec3(1.0, 0.96, 0.99);
+
+  vec3 color = deepBlue;
+  color = mix(color, electricBlue, smoothstep(0.05, 0.18, t));
+  color = mix(color, paleBlue, smoothstep(0.18, 0.34, t));
+  color = mix(color, skyWhite, smoothstep(0.34, 0.47, t));
+  color = mix(color, divider, smoothstep(0.495, 0.515, t));
+  color = mix(color, magenta, smoothstep(0.515, 0.68, t));
+  color = mix(color, pink, smoothstep(0.68, 0.82, t));
+  color = mix(color, lowerWhite, smoothstep(0.82, 0.94, t));
+  return color;
+}
+
+void main() {
+  float topDown = inverseLerp(uBoundsMaxY, uBoundsMinY, vObjectPosition.y);
+  vec3 normal = normalize(vWorldNormal);
+  vec3 viewDir = normalize(vViewDirection);
+  vec3 reflectDir = reflect(-viewDir, normal);
+
+  float reflectionT = clamp(0.5 - reflectDir.y * 0.5, 0.0, 1.0);
+  float reflectionSweep = clamp(
+    reflectionT + reflectDir.x * 0.08 - vObjectNormal.x * 0.05,
+    0.0,
+    1.0
+  );
+
+  float frontFace = smoothstep(0.34, 0.92, vObjectNormal.z);
+  float bevelMask = 1.0 - frontFace;
+
+  vec3 faceChrome = gradientFromTop(mix(topDown, reflectionSweep, 0.38));
+  vec3 edgeChrome = gradientFromTop(mix(topDown, reflectionSweep, 0.82));
+
+  vec3 deepShadow = vec3(0.025, 0.005, 0.04);
+  vec3 color = mix(deepShadow, edgeChrome * 0.5, 0.45);
+  color = mix(color, faceChrome, frontFace);
+
+  float directional = max(dot(normal, normalize(vec3(-0.22, 0.4, 0.88))), 0.0);
+  color *= mix(0.56, 1.04, pow(directional, 0.85));
+
+  float centerShadow = smoothstep(0.0, 0.12, topDown) * (1.0 - smoothstep(0.88, 1.0, topDown));
+  color *= mix(0.92, 1.0, centerShadow);
+
+  float dividerShadow = exp(-pow((reflectionSweep - 0.51) / 0.04, 2.0));
+  color *= 1.0 - dividerShadow * 0.18 * frontFace;
+
+  float rim = pow(1.0 - max(dot(normal, viewDir), 0.0), 4.5);
+  color += rim * mix(vec3(0.3, 0.55, 1.0), vec3(1.0, 0.7, 0.95), smoothstep(0.5, 0.78, topDown)) * (0.26 + 0.36 * bevelMask);
+
+  vec3 halfVector = normalize(viewDir + normalize(vec3(-0.4, 0.52, 0.82)));
+  float specular = pow(max(dot(normal, halfVector), 0.0), 48.0);
+  color += specular * vec3(1.0, 0.98, 1.0) * (0.3 + bevelMask * 0.24);
+
+  float upperSheen = exp(-pow((reflectionSweep - 0.15) / 0.06, 2.0));
+  float lowerSheen = exp(-pow((reflectionSweep - 0.9) / 0.07, 2.0));
+  color += vec3(0.66, 0.8, 1.0) * upperSheen * 0.12 * frontFace;
+  color += vec3(1.0, 0.94, 0.98) * lowerSheen * 0.1 * frontFace;
+
+  float horizonLine = exp(-pow((reflectionSweep - 0.505) / 0.018, 2.0));
+  color += horizonLine * vec3(1.0) * 0.08 * frontFace;
+
+  float scan = 0.5 + 0.5 * sin((reflectionSweep * 96.0 - uTime * 0.2) * 6.28318530718);
+  float scanMask = smoothstep(0.45, 1.0, scan);
+  vec3 scanTint = mix(vec3(0.58, 0.7, 1.0), vec3(1.0, 0.72, 0.96), smoothstep(0.52, 0.72, reflectionSweep));
+  color += scanTint * scanMask * 0.014 * frontFace;
+
+  color = max(color, vec3(0.0));
+
+  gl_FragColor = vec4(color, 1.0);
+}
+`;
 
 const AnimatedDashLine = ({
   shape,
@@ -100,35 +192,19 @@ const AnimatedDashLine = ({
 type UniverseTitleProps = {
   viewIndex: number;
   textScale?: number;
-  envMap?: THREE.Texture | null;
-  groupRef?: MutableRefObject<THREE.Group | null>;
 };
 
 export const UniverseTitle = ({
   viewIndex,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
-  envMap = null,
-  groupRef,
 }: UniverseTitleProps) => {
   const browserWidth = useThree((state) => state.size.width);
   const rootRef = useRef<THREE.Group>(null);
   const centerRef = useRef<THREE.Group>(null);
+  const chromeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const mousePos = useRef(new THREE.Vector2(0, 0));
   const mouseVel = useRef(new THREE.Vector2(0, 0));
   const targetMouse = useRef(new THREE.Vector2(0, 0));
-  const transmissionFadeRef = useRef(0);
-  const transmissionMaterialRef = useRef<THREE.Material | null>(null);
-  const showTransmissionMaterialRef = useRef(false);
-  const pointerMotionStrengthRef = useRef(0);
-  const lastPointerSampleRef = useRef<{
-    x: number;
-    y: number;
-    time: number;
-  } | null>(null);
-  const [isPrimaryLineAnimationActive, setIsPrimaryLineAnimationActive] =
-    useState(false);
-  const [showTransmissionMaterial, setShowTransmissionMaterial] =
-    useState(false);
   const font = useFont("/AAReg.json");
 
   const text = "Shane Cranor";
@@ -140,7 +216,7 @@ export const UniverseTitle = ({
       curveSegments: 32,
       bevelEnabled: true,
       bevelThickness: 0.05,
-      bevelSize: 0.12,
+      bevelSize: 0.02,
       bevelOffset: 0,
       bevelSegments: 5,
     }),
@@ -151,7 +227,13 @@ export const UniverseTitle = ({
   const shapes = useMemo(() => {
     return font.generateShapes(text, config.size);
   }, [font, text, config.size]);
-  const { textGeometry, hitboxGeometry, hitboxPosition } = useMemo(() => {
+  const {
+    textGeometry,
+    hitboxGeometry,
+    hitboxPosition,
+    boundsMinY,
+    boundsMaxY,
+  } = useMemo(() => {
     const geometry = new TextGeometry(text, config);
     geometry.computeBoundingBox();
 
@@ -168,8 +250,18 @@ export const UniverseTitle = ({
       textGeometry: geometry,
       hitboxGeometry: hoverGeometry,
       hitboxPosition: center.toArray() as [number, number, number],
+      boundsMinY: bounds.min.y,
+      boundsMaxY: bounds.max.y,
     };
   }, [config, text]);
+  const chromeUniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uBoundsMinY: { value: boundsMinY },
+      uBoundsMaxY: { value: boundsMaxY },
+    }),
+    [boundsMaxY, boundsMinY],
+  );
 
   const isDefaultView = viewIndex === 0 || true;
   const responsiveTextScale = useMemo(() => {
@@ -228,143 +320,32 @@ export const UniverseTitle = ({
       Math.sin(t) * 0.005 + easedX * 0.08,
       Math.cos(t) * 0.005,
     );
-
-    const strengthDecayEase =
-      1 - Math.exp(-TITLE_POINTER_STRENGTH_DECAY_SPEED * delta);
-    pointerMotionStrengthRef.current = THREE.MathUtils.lerp(
-      pointerMotionStrengthRef.current,
-      0,
-      strengthDecayEase,
-    );
-
-    const targetFade = pointerMotionStrengthRef.current;
-    const fadeEase = 1 - Math.exp(-TITLE_MATERIAL_FADE_SPEED * delta);
-    const nextFade = THREE.MathUtils.lerp(
-      transmissionFadeRef.current,
-      targetFade,
-      fadeEase,
-    );
-    transmissionFadeRef.current = nextFade;
-
-    const transmissionMaterial = transmissionMaterialRef.current as
-      | (THREE.Material & { opacity?: number; transmission?: number })
-      | null;
-
-    if (transmissionMaterial) {
-      transmissionMaterial.opacity = nextFade;
-      transmissionMaterial.transmission = nextFade;
-    }
-
-    if (targetFade > 0 && !showTransmissionMaterialRef.current) {
-      showTransmissionMaterialRef.current = true;
-      setShowTransmissionMaterial(true);
-    }
-
-    if (
-      targetFade === 0 &&
-      showTransmissionMaterialRef.current &&
-      nextFade <= TITLE_MATERIAL_FADE_EPSILON
-    ) {
-      showTransmissionMaterialRef.current = false;
-      setShowTransmissionMaterial(false);
+    const chromeMaterial = chromeMaterialRef.current;
+    if (chromeMaterial) {
+      chromeMaterial.uniforms.uTime.value = t;
     }
   });
 
   useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      const lastSample = lastPointerSampleRef.current;
-      const nextSample = {
-        x: event.clientX,
-        y: event.clientY,
-        time: event.timeStamp,
-      };
-
-      if (lastSample) {
-        const deltaTimeMs = Math.max(1, nextSample.time - lastSample.time);
-        const distance = Math.hypot(
-          nextSample.x - lastSample.x,
-          nextSample.y - lastSample.y,
-        );
-        const speed = (distance / deltaTimeMs) * 1000;
-        const normalizedStrength = THREE.MathUtils.clamp(
-          (speed - TITLE_POINTER_SPEED_MIN) /
-            (TITLE_POINTER_SPEED_MAX - TITLE_POINTER_SPEED_MIN),
-          0,
-          1,
-        );
-
-        pointerMotionStrengthRef.current = Math.max(
-          pointerMotionStrengthRef.current,
-          normalizedStrength,
-        );
-      }
-
-      lastPointerSampleRef.current = nextSample;
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-
     return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
       textGeometry.dispose();
       hitboxGeometry.dispose();
     };
   }, [hitboxGeometry, textGeometry]);
 
-  const setRootRef = (node: THREE.Group | null) => {
-    rootRef.current = node;
-
-    if (groupRef) {
-      groupRef.current = node;
-    }
-  };
-
   return (
-    <group ref={setRootRef}>
+    <group ref={rootRef}>
       <Center ref={centerRef}>
         <mesh geometry={textGeometry}>
-          {/* <meshBasicMaterial color="black" /> */}
-          <meshPhysicalMaterial
-            color="#fdf8ff"
-            metalness={1}
-            roughness={0.04}
-            clearcoat={1}
-            clearcoatRoughness={0.03}
-            reflectivity={1}
-            envMapIntensity={1.4}
-            envMap={envMap ?? undefined}
+          <shaderMaterial
+            ref={chromeMaterialRef}
+            uniforms={chromeUniforms}
+            vertexShader={synthwaveChromeVertexShader}
+            fragmentShader={synthwaveChromeFragmentShader}
+            toneMapped={false}
           />
         </mesh>
-        {/* {showTransmissionMaterial && (
-          <mesh geometry={textGeometry} renderOrder={1}>
-            <MeshTransmissionMaterial
-              ref={transmissionMaterialRef}
-              backside
-              transparent
-              samples={4}
-              resolution={256}
-              thickness={0.5}
-              roughness={0.2}
-              iridescence={50}
-              iridescenceIOR={1.4}
-              chromaticAberration={1}
-              anisotropy={1}
-              color={UNIVERSE_TITLE_COLOR}
-              transmission={1}
-              opacity={0}
-              depthWrite={false}
-              emissive={[0, 0, 0]}
-            />
-          </mesh>
-        )} */}
-        <mesh
-          geometry={hitboxGeometry}
-          position={hitboxPosition}
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsPrimaryLineAnimationActive((current) => !current);
-          }}
-        >
+        <mesh geometry={hitboxGeometry} position={hitboxPosition}>
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
         {false && (
@@ -381,7 +362,7 @@ export const UniverseTitle = ({
                     color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                     thickness={2}
                     speed={0.1}
-                    gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
+                    gapSize={0}
                   />
                   {shape.holes.map((hole, holeIndex) => (
                     <AnimatedDashLine
@@ -390,7 +371,7 @@ export const UniverseTitle = ({
                       color={UNIVERSE_TITLE_OUTLINE_GLOW_COLOR}
                       thickness={2}
                       speed={0.1}
-                      gapSize={isPrimaryLineAnimationActive ? 0.1 : 0}
+                      gapSize={0}
                     />
                   ))}
                 </group>

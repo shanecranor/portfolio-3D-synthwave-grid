@@ -104,7 +104,7 @@ export const ThreeJsCanvas = () => {
             blendFunction={BlendFunction.DARKEN} // blend mode
           />
 
-          <BrightnessContrast brightness={0} contrast={0.1} />
+          <BrightnessContrast brightness={0} contrast={0.0} />
           <Scanline
             // blendFunction={BlendFunction.NORMAL} // blend mode
             density={1} // scanline density
