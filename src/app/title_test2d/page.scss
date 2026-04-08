@@ -1,0 +1,317 @@
+.title-test-2d-page {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 74, 224, 0.24), transparent 28%),
+    radial-gradient(circle at 50% 62%, rgba(125, 95, 255, 0.2), transparent 38%),
+    linear-gradient(180deg, #050d24 0%, #2c175f 42%, #18011d 52%, #7f0072 78%, #fff6ff 100%);
+}
+
+.title-test-2d-page::before,
+.title-test-2d-page::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.title-test-2d-page::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-0.5px);
+}
+
+.title-test-2d-page::after {
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.title-test-2d-page__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.title-test-2d-page__canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.title-test-2d-page__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.title-test-2d-page__badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.34);
+  color: rgba(255, 255, 255, 0.96);
+  font:
+    700 0.95rem/1 "Orbitron", sans-serif;
+}
+
+.title-test-2d-page__meta {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  padding: 0.45rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.86);
+  font:
+    600 0.78rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__hint,
+.title-test-2d-page__nav {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.72);
+  font:
+    600 0.72rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__hint {
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+}
+
+.title-test-2d-page__nav {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.title-test-2d-page__nav--left {
+  left: 1rem;
+}
+
+.title-test-2d-page__nav--right {
+  right: 1rem;
+}
+
+.title-test-2d-page__controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 4;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(5, 7, 18, 0.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.32);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.title-test-2d-page__controls-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title-test-2d-page__controls-header h2 {
+  margin: 0;
+  font:
+    700 0.96rem/1.1 "Orbitron", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__controls-header p {
+  margin: 0.35rem 0 0;
+  color: rgba(255, 255, 255, 0.64);
+  font:
+    500 0.72rem/1.45 "Orbitron", sans-serif;
+}
+
+.title-test-2d-page__reset {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font:
+    700 0.68rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.title-test-2d-page__reset:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.title-test-2d-page__controls-status {
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font:
+    600 0.66rem/1.35 "Orbitron", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__control-section {
+  margin-top: 1rem;
+}
+
+.title-test-2d-page__control-section h3 {
+  margin: 0 0 0.65rem;
+  color: rgba(255, 255, 255, 0.84);
+  font:
+    700 0.74rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__toggle-list,
+.title-test-2d-page__color-list,
+.title-test-2d-page__slider-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.title-test-2d-page__toggle,
+.title-test-2d-page__color,
+.title-test-2d-page__slider {
+  padding: 0.6rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.title-test-2d-page__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.86);
+  font:
+    600 0.72rem/1.2 "Orbitron", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.title-test-2d-page__color {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.title-test-2d-page__color > span {
+  color: rgba(255, 255, 255, 0.84);
+  font:
+    600 0.7rem/1.2 "Orbitron", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__color-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.title-test-2d-page__color-inputs input[type="color"] {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.title-test-2d-page__color-inputs code,
+.title-test-2d-page__slider-header code {
+  color: rgba(255, 255, 255, 0.78);
+  font:
+    600 0.72rem/1 "SFMono-Regular", Consolas, monospace;
+}
+
+.title-test-2d-page__slider {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.title-test-2d-page__slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.84);
+  font:
+    600 0.7rem/1.2 "Orbitron", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title-test-2d-page__slider input[type="range"] {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .title-test-2d-page__badge {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.82rem;
+  }
+
+  .title-test-2d-page__meta {
+    font-size: 0.68rem;
+  }
+
+  .title-test-2d-page__hint,
+  .title-test-2d-page__nav {
+    font-size: 0.62rem;
+  }
+
+  .title-test-2d-page__controls {
+    top: auto;
+    right: 0.75rem;
+    bottom: 3.7rem;
+    left: 0.75rem;
+    width: auto;
+    max-height: 44dvh;
+  }
+}

@@ -69,6 +69,7 @@ vec3 gradientFromTop(float t) {
   color = mix(color, magenta, smoothstep(0.515, 0.68, t));
   color = mix(color, pink, smoothstep(0.68, 0.82, t));
   color = mix(color, lowerWhite, smoothstep(0.82, 0.94, t));
+  color = mix(color, vec3(0.0,0.0,0.0), 0.5);
   return color;
 }
 
