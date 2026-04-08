@@ -3,16 +3,7 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Center, useFont } from "@react-three/drei";
-import {
-  Bloom,
-  BrightnessContrast,
-  EffectComposer,
-  Noise,
-  Scanline,
-  Vignette,
-} from "@react-three/postprocessing";
 import * as THREE from "three";
-import { BlendFunction } from "postprocessing";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 
 type PointerState = {
@@ -361,6 +352,40 @@ function createUniformColor(value: THREE.ColorRepresentation) {
   return new THREE.Color(value);
 }
 
+function applyVariantPreset(
+  material: THREE.ShaderMaterial,
+  preset: VariantPreset,
+) {
+  material.uniforms.uSkyDeep.value.set(preset.skyDeep);
+  material.uniforms.uSkyMid.value.set(preset.skyMid);
+  material.uniforms.uSkyLight.value.set(preset.skyLight);
+  material.uniforms.uGroundHot.value.set(preset.groundHot);
+  material.uniforms.uGroundMid.value.set(preset.groundMid);
+  material.uniforms.uGroundLight.value.set(preset.groundLight);
+  material.uniforms.uDivider.value.set(preset.divider);
+  material.uniforms.uShadowTint.value.set(preset.shadowTint);
+  material.uniforms.uHighlightTint.value.set(preset.highlightTint);
+
+  material.uniforms.uSplitBase.value = preset.splitBase;
+  material.uniforms.uMountainAmp1.value = preset.mountainAmp1;
+  material.uniforms.uMountainAmp2.value = preset.mountainAmp2;
+  material.uniforms.uMountainFreq1.value = preset.mountainFreq1;
+  material.uniforms.uMountainFreq2.value = preset.mountainFreq2;
+  material.uniforms.uMountainPhase1.value = preset.mountainPhase1;
+  material.uniforms.uMountainPhase2.value = preset.mountainPhase2;
+  material.uniforms.uReflectionMix.value = preset.reflectionMix;
+  material.uniforms.uSheenStrength.value = preset.sheenStrength;
+  material.uniforms.uScanStrength.value = preset.scanStrength;
+  material.uniforms.uEdgeSoftness.value = preset.edgeSoftness;
+  material.uniforms.uPointerInfluence.value = preset.pointerInfluence;
+  material.uniforms.uDividerWidth.value = preset.dividerWidth;
+  material.uniforms.uDividerStrength.value = preset.dividerStrength;
+  material.uniforms.uBandCurve.value = preset.bandCurve;
+  material.uniforms.uDividerEnabled.value = preset.dividerEnabled ? 1 : 0;
+  material.uniforms.uSheenEnabled.value = preset.sheenEnabled ? 1 : 0;
+  material.uniforms.uScanEnabled.value = preset.scanEnabled ? 1 : 0;
+}
+
 function FlatTitleVariant({
   variant,
   pointerState,
@@ -418,7 +443,10 @@ function FlatTitleVariant({
 
   const fitScale = useMemo(() => {
     const availableWidth = maxWidth * 0.82;
-    return Math.min(availableWidth / Math.max(width, 0.001), size.width < 900 ? 0.92 : 1);
+    return Math.min(
+      availableWidth / Math.max(width, 0.001),
+      size.width < 900 ? 0.92 : 1,
+    );
   }, [maxWidth, size.width, width]);
 
   const titleUniforms = useMemo(
@@ -437,7 +465,9 @@ function FlatTitleVariant({
       uGroundLight: { value: createUniformColor(variant.preset.groundLight) },
       uDivider: { value: createUniformColor(variant.preset.divider) },
       uShadowTint: { value: createUniformColor(variant.preset.shadowTint) },
-      uHighlightTint: { value: createUniformColor(variant.preset.highlightTint) },
+      uHighlightTint: {
+        value: createUniformColor(variant.preset.highlightTint),
+      },
       uSplitBase: { value: variant.preset.splitBase },
       uMountainAmp1: { value: variant.preset.mountainAmp1 },
       uMountainAmp2: { value: variant.preset.mountainAmp2 },
@@ -457,13 +487,7 @@ function FlatTitleVariant({
       uSheenEnabled: { value: variant.preset.sheenEnabled ? 1 : 0 },
       uScanEnabled: { value: variant.preset.scanEnabled ? 1 : 0 },
     }),
-    [
-      boundsMaxX,
-      boundsMaxY,
-      boundsMinX,
-      boundsMinY,
-      variant.preset,
-    ],
+    [boundsMaxX, boundsMaxY, boundsMinX, boundsMinY, variant.preset],
   );
 
   const shadowUniforms = useMemo(
@@ -505,6 +529,12 @@ function FlatTitleVariant({
       shadowMaterial.uniforms.uMouse.value.copy(mouse);
     }
   });
+
+  useEffect(() => {
+    const titleMaterial = titleMaterialRef.current;
+    if (!titleMaterial) return;
+    applyVariantPreset(titleMaterial, variant.preset);
+  }, [variant.preset]);
 
   useEffect(() => {
     return () => {
@@ -570,6 +600,10 @@ function SceneContents({ activeVariant }: { activeVariant: VariantConfig }) {
   const targetMouse = useRef(new THREE.Vector2(0, 0));
   const pointerState = { mousePos, mouseVel, targetMouse };
   const { viewport } = useThree();
+  const variantSignature = useMemo(
+    () => `${activeVariant.id}:${JSON.stringify(activeVariant.preset)}`,
+    [activeVariant],
+  );
 
   useFrame(({ pointer }, delta) => {
     targetMouse.current.set(pointer.x, pointer.y);
@@ -588,30 +622,12 @@ function SceneContents({ activeVariant }: { activeVariant: VariantConfig }) {
   return (
     <>
       <FlatTitleVariant
-        key={activeVariant.id}
+        key={variantSignature}
         variant={activeVariant}
         pointerState={pointerState}
         position={[0, 0, 0]}
         maxWidth={viewport.width}
       />
-
-      <EffectComposer>
-        <Bloom
-          luminanceThreshold={0}
-          intensity={1.08}
-          levels={6}
-          mipmapBlur
-          opacity={0.88}
-        />
-        <Noise opacity={0.01} />
-        <Vignette
-          offset={0.1}
-          darkness={0.62}
-          blendFunction={BlendFunction.DARKEN}
-        />
-        <BrightnessContrast brightness={0.01} contrast={0.08} />
-        <Scanline density={1} opacity={0.08} scrollSpeed={0.01} />
-      </EffectComposer>
     </>
   );
 }
