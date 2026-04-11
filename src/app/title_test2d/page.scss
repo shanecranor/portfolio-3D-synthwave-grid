@@ -2,10 +2,7 @@
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 74, 224, 0.24), transparent 28%),
-    radial-gradient(circle at 50% 62%, rgba(125, 95, 255, 0.2), transparent 38%),
-    linear-gradient(180deg, #050d24 0%, #2c175f 42%, #18011d 52%, #7f0072 78%, #fff6ff 100%);
+  background: #02040a;
 }
 
 .title-test-2d-page::before,
@@ -125,7 +122,13 @@
   right: 1rem;
   z-index: 4;
   width: min(22rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
+  display: grid;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.title-test-2d-page__controls-panel {
+  max-height: calc(100dvh - 5.25rem);
   overflow: auto;
   padding: 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -133,7 +136,25 @@
   background: rgba(5, 7, 18, 0.82);
   backdrop-filter: blur(18px);
   box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.32);
-  color: rgba(255, 255, 255, 0.9);
+}
+
+.title-test-2d-page__controls-toggle {
+  justify-self: end;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(5, 7, 18, 0.82);
+  backdrop-filter: blur(18px);
+  color: rgba(255, 255, 255, 0.92);
+  font:
+    700 0.68rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.title-test-2d-page__controls-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .title-test-2d-page__controls-header {
@@ -187,6 +208,32 @@
     600 0.66rem/1.35 "Orbitron", sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.title-test-2d-page__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.title-test-2d-page__tab {
+  padding: 0.6rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.76);
+  font:
+    700 0.66rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.title-test-2d-page__tab--active {
+  border-color: rgba(123, 177, 255, 0.45);
+  background: rgba(77, 134, 255, 0.18);
+  color: rgba(255, 255, 255, 0.98);
 }
 
 .title-test-2d-page__control-section {
@@ -290,6 +337,43 @@
   width: 100%;
 }
 
+.title-test-2d-page__controls-footer {
+  position: sticky;
+  bottom: -0.9rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+  background: linear-gradient(180deg, rgba(5, 7, 18, 0), rgba(5, 7, 18, 0.92) 22%);
+}
+
+.title-test-2d-page__export {
+  width: 100%;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.94);
+  font:
+    700 0.74rem/1 "Orbitron", sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.title-test-2d-page__export:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.title-test-2d-page__export-status {
+  color: rgba(255, 255, 255, 0.66);
+  font:
+    600 0.65rem/1.35 "Orbitron", sans-serif;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 @media (max-width: 900px) {
   .title-test-2d-page__badge {
     width: 1.75rem;
@@ -312,6 +396,9 @@
     bottom: 3.7rem;
     left: 0.75rem;
     width: auto;
+  }
+
+  .title-test-2d-page__controls-panel {
     max-height: 44dvh;
   }
 }

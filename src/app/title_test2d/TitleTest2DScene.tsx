@@ -14,7 +14,7 @@ import { EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
 import { BlendFunction, Effect } from "postprocessing";
-import { CameraRig } from "@/components/3D/CameraRig";
+import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { GlowSphere } from "@/components/3D/GlowSphere";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { UniverseSkyDome } from "@/components/3D/UniverseSkyDome";
@@ -72,6 +72,12 @@ export type VariantPreset = {
   rearOutlineColor: THREE.ColorRepresentation;
   rearOutlineOpacity: number;
   rearOutlineScale: number;
+  vhsFps: number;
+  vhsTimebaseStrength: number;
+  vhsChromaBleed: number;
+  vhsHeadswitchStrength: number;
+  vhsDropoutStrength: number;
+  vhsNoiseStrength: number;
 };
 
 export type VariantConfig = {
@@ -82,10 +88,25 @@ export type VariantConfig = {
 
 const UNIVERSE_EDGE_COLOR = [209, 109, 169];
 const UNIVERSE_SPHERE_GLOW_COLOR = [69, 49, 99];
+const VHS_EFFECT_FPS = 29.97;
+const DEFAULT_VHS_SETTINGS = {
+  vhsFps: 29.97,
+  vhsTimebaseStrength: 1,
+  vhsChromaBleed: 2.3,
+  vhsHeadswitchStrength: 0.9,
+  vhsDropoutStrength: 1,
+  vhsNoiseStrength: 0.65,
+} as const;
 
 const VHS_EFFECT_SHADER = `
 uniform sampler2D uNoiseTexture;
-uniform float uTime;
+uniform float uSteppedTime;
+uniform float uContinuousTime;
+uniform float uVhsTimebaseStrength;
+uniform float uVhsChromaBleed;
+uniform float uVhsHeadswitchStrength;
+uniform float uVhsDropoutStrength;
+uniform float uVhsNoiseStrength;
 
 #define V vec2(0.0, 1.0)
 #define VHS_PI 3.14159265
@@ -95,12 +116,6 @@ uniform float uTime;
 
 #define LUMA_SAMPLES 7
 #define CHROMA_SAMPLES 5
-#define TIMEBASE_STRENGTH 1.0
-#define CHROMA_BLEED 2.3
-#define HEADSWITCH_STRENGTH 0.9
-#define DROPOUT_STRENGTH 1.0
-#define NOISE_STRENGTH 0.65
-
 float v2random(vec2 uv) {
   return texture(uNoiseTexture, fract(uv)).x;
 }
@@ -150,7 +165,7 @@ float lineTimebaseOffset(float y, float time) {
   float medium = v2random(vec2(y * 2.7, time * 0.7)) * 2.0 - 1.0;
   float fine = v2random(vec2(y * 24.0, floor(time * 16.0) * 0.071)) * 2.0 - 1.0;
   float wobble = sin(y * VHS_PI * 2.0 * 2.4 + time * 2.1 + coarse * 2.2);
-  return TIMEBASE_STRENGTH * (coarse * 2.5 + medium * 1.0 + fine * 0.35 + wobble * 0.85);
+  return uVhsTimebaseStrength * (coarse * 2.5 + medium * 1.0 + fine * 0.35 + wobble * 0.85);
 }
 
 float chromaPhaseError(float y, float time) {
@@ -212,7 +227,7 @@ vec2 sampleChromaIQ(vec2 uv, float chromaOffset, float blurAmount) {
 
 vec3 sampleCompositeLike(vec2 uv, float time) {
   float phase = chromaPhaseError(uv.y, time);
-  float chromaLag = CHROMA_BLEED * (0.85 + 0.3 * v2random(vec2(uv.y * 3.1, floor(time * 2.0) * 0.083)));
+  float chromaLag = uVhsChromaBleed * (0.85 + 0.3 * v2random(vec2(uv.y * 3.1, floor(time * 2.0) * 0.083)));
   float chromaBlur = 1.5 + 0.9 * abs(phase) * 10.0;
 
   float y = sampleLuma(uv);
@@ -223,14 +238,15 @@ vec3 sampleCompositeLike(vec2 uv, float time) {
 }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  float time = uTime;
+  float time = uSteppedTime;
+  float continuousTime = uContinuousTime;
   vec2 vhsUv = (floor(uv * VHS_RES) + 0.5) / VHS_RES;
 
   float verticalDrift = trackingWarp(vhsUv.y, time);
   float lineOffset = lineTimebaseOffset(vhsUv.y, time);
   float headSwitch = headSwitchMask(vhsUv.y, time);
 
-  float headSwitchShift = HEADSWITCH_STRENGTH *
+  float headSwitchShift = uVhsHeadswitchStrength *
     headSwitch *
     ((v2random(vec2(floor(vhsUv.y * VHS_RES.y) * 0.013, floor(time * 30.0) * 0.17)) * 2.0 - 1.0) * 9.0);
 
@@ -241,11 +257,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec3 yiq = sampleCompositeLike(sampleUv, time);
 
   float hsNoise = v2random(vec2(sampleUv.x * 7.0 + time * 4.0, sampleUv.y * 43.0));
-  yiq.x += (hsNoise - 0.5) * 0.12 * headSwitch * HEADSWITCH_STRENGTH;
-  yiq.yz *= 1.0 - headSwitch * 0.45 * HEADSWITCH_STRENGTH;
-  yiq.x *= 1.0 - headSwitch * 0.12 * HEADSWITCH_STRENGTH;
+  yiq.x += (hsNoise - 0.5) * 0.12 * headSwitch * uVhsHeadswitchStrength;
+  yiq.yz *= 1.0 - headSwitch * 0.45 * uVhsHeadswitchStrength;
+  yiq.x *= 1.0 - headSwitch * 0.12 * uVhsHeadswitchStrength;
 
-  float dropout = dropoutMask(sampleUv, time) * DROPOUT_STRENGTH;
+  float dropout = dropoutMask(sampleUv, time) * uVhsDropoutStrength;
   if (dropout > 0.0) {
     float spark = v2random(vec2(sampleUv.x * 15.0 + time * 23.0, floor(sampleUv.y * VHS_RES.y) * 0.031));
     yiq.x = mix(yiq.x, 0.86 + spark * 0.28, dropout * 0.85);
@@ -261,9 +277,14 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   }
 
   float gain = 0.98 + 0.05 * (v2random(vec2(floor(time * 4.0) * 0.031, 0.13)) - 0.5);
-  float rf = v2random(vec2(sampleUv.x * 55.0 + time * 21.0, sampleUv.y * 3.3 + time * 1.7)) - 0.5;
-  yiq.x = yiq.x * gain + rf * 0.035 * NOISE_STRENGTH;
-  yiq.yz += (v3random(vec2(sampleUv.y * 9.0, time * 0.9)).xy - 0.5) * 0.01 * NOISE_STRENGTH;
+  float rf = v2random(vec2(
+    sampleUv.x * 55.0 + continuousTime * 21.0,
+    sampleUv.y * 3.3 + continuousTime * 1.7
+  )) - 0.5;
+  yiq.x = yiq.x * gain + rf * 0.035 * uVhsNoiseStrength;
+  yiq.yz += (
+    v3random(vec2(sampleUv.y * 9.0, continuousTime * 0.9)).xy - 0.5
+  ) * 0.01 * uVhsNoiseStrength;
 
   yiq = vec3(0.02, -0.01, 0.0) + yiq * vec3(0.98, 0.92, 0.92);
 
@@ -296,14 +317,50 @@ function createNoiseTexture(size = 256) {
 }
 
 class VhsSignalEffectImpl extends Effect {
-  constructor(noiseTexture: THREE.Texture) {
+  private rawTime = 0;
+
+  constructor(noiseTexture: THREE.Texture, settings: Pick<
+    VariantPreset,
+    | "vhsFps"
+    | "vhsTimebaseStrength"
+    | "vhsChromaBleed"
+    | "vhsHeadswitchStrength"
+    | "vhsDropoutStrength"
+    | "vhsNoiseStrength"
+  >) {
     super("VhsSignalEffect", VHS_EFFECT_SHADER, {
       blendFunction: BlendFunction.NORMAL,
       uniforms: new Map<string, THREE.Uniform>([
-        ["uTime", new THREE.Uniform(0)],
+        ["uSteppedTime", new THREE.Uniform(0)],
+        ["uContinuousTime", new THREE.Uniform(0)],
         ["uNoiseTexture", new THREE.Uniform(noiseTexture)],
+        ["uVhsFps", new THREE.Uniform(settings.vhsFps)],
+        ["uVhsTimebaseStrength", new THREE.Uniform(settings.vhsTimebaseStrength)],
+        ["uVhsChromaBleed", new THREE.Uniform(settings.vhsChromaBleed)],
+        ["uVhsHeadswitchStrength", new THREE.Uniform(settings.vhsHeadswitchStrength)],
+        ["uVhsDropoutStrength", new THREE.Uniform(settings.vhsDropoutStrength)],
+        ["uVhsNoiseStrength", new THREE.Uniform(settings.vhsNoiseStrength)],
       ]),
     });
+  }
+
+  setSettings(
+    settings: Pick<
+      VariantPreset,
+      | "vhsFps"
+      | "vhsTimebaseStrength"
+      | "vhsChromaBleed"
+      | "vhsHeadswitchStrength"
+      | "vhsDropoutStrength"
+      | "vhsNoiseStrength"
+    >,
+  ) {
+    this.uniforms.get("uVhsFps")!.value = settings.vhsFps;
+    this.uniforms.get("uVhsTimebaseStrength")!.value = settings.vhsTimebaseStrength;
+    this.uniforms.get("uVhsChromaBleed")!.value = settings.vhsChromaBleed;
+    this.uniforms.get("uVhsHeadswitchStrength")!.value = settings.vhsHeadswitchStrength;
+    this.uniforms.get("uVhsDropoutStrength")!.value = settings.vhsDropoutStrength;
+    this.uniforms.get("uVhsNoiseStrength")!.value = settings.vhsNoiseStrength;
   }
 
   override update(
@@ -311,27 +368,52 @@ class VhsSignalEffectImpl extends Effect {
     _inputBuffer: THREE.WebGLRenderTarget,
     deltaTime: number,
   ) {
-    const timeUniform = this.uniforms.get("uTime");
-    if (timeUniform) {
-      timeUniform.value += deltaTime;
+    this.rawTime += deltaTime;
+
+    const steppedTimeUniform = this.uniforms.get("uSteppedTime");
+    if (steppedTimeUniform) {
+      steppedTimeUniform.value =
+        Math.floor(this.rawTime * Math.max(1, this.uniforms.get("uVhsFps")?.value ?? VHS_EFFECT_FPS)) /
+        Math.max(1, this.uniforms.get("uVhsFps")?.value ?? VHS_EFFECT_FPS);
+    }
+
+    const continuousTimeUniform = this.uniforms.get("uContinuousTime");
+    if (continuousTimeUniform) {
+      continuousTimeUniform.value = this.rawTime;
     }
   }
 }
 
-const VhsSignalEffect = forwardRef<Effect, { noiseTexture: THREE.Texture }>(
-  function VhsSignalEffect({ noiseTexture }, ref) {
+const VhsSignalEffect = forwardRef<
+  Effect,
+  {
+    noiseTexture: THREE.Texture;
+    settings: Pick<
+      VariantPreset,
+      | "vhsFps"
+      | "vhsTimebaseStrength"
+      | "vhsChromaBleed"
+      | "vhsHeadswitchStrength"
+      | "vhsDropoutStrength"
+      | "vhsNoiseStrength"
+    >;
+  }
+>(function VhsSignalEffect({ noiseTexture, settings }, ref) {
     const effect = useMemo(
-      () => new VhsSignalEffectImpl(noiseTexture),
-      [noiseTexture],
+      () => new VhsSignalEffectImpl(noiseTexture, settings),
+      [noiseTexture, settings],
     );
+
+    useEffect(() => {
+      effect.setSettings(settings);
+    }, [effect, settings]);
 
     useEffect(() => {
       return () => effect.dispose();
     }, [effect]);
 
     return <primitive ref={ref} object={effect} dispose={null} />;
-  },
-);
+  });
 
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
@@ -613,6 +695,7 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       rearOutlineColor: "#ffffff",
       rearOutlineOpacity: 0.9,
       rearOutlineScale: 1.035,
+      ...DEFAULT_VHS_SETTINGS,
     },
   },
   {
@@ -658,6 +741,7 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       rearOutlineColor: "#ffffff",
       rearOutlineOpacity: 0.82,
       rearOutlineScale: 1.03,
+      ...DEFAULT_VHS_SETTINGS,
     },
   },
   {
@@ -703,6 +787,7 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       rearOutlineColor: "#fff5ff",
       rearOutlineOpacity: 0.94,
       rearOutlineScale: 1.04,
+      ...DEFAULT_VHS_SETTINGS,
     },
   },
   {
@@ -748,6 +833,7 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       rearOutlineColor: "#ffffff",
       rearOutlineOpacity: 0.9,
       rearOutlineScale: 1.035,
+      ...DEFAULT_VHS_SETTINGS,
     },
   },
 ];
@@ -796,12 +882,16 @@ function FlatTitleVariant({
   variant,
   pointerState,
   position,
-  targetScale,
+  baseScale,
+  referenceDistance,
+  referenceFov,
 }: {
   variant: VariantConfig;
   pointerState: PointerState;
   position: [number, number, number];
-  targetScale: number;
+  baseScale: number;
+  referenceDistance: number;
+  referenceFov: number;
 }) {
   const rootRef = useRef<THREE.Group>(null);
   const mainRef = useRef<THREE.Group>(null);
@@ -909,23 +999,35 @@ function FlatTitleVariant({
     [boundsMaxX, boundsMaxY, boundsMinX, boundsMinY, variant.preset],
   );
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const main = mainRef.current;
     const shadow = shadowRef.current;
     const titleMaterial = titleMaterialRef.current;
     const shadowMaterial = shadowMaterialRef.current;
     const mouse = pointerState.mousePos.current;
+    const cameraToTitleDistance = camera.position.distanceTo(
+      new THREE.Vector3(...position),
+    );
+    const currentFov =
+      camera instanceof THREE.PerspectiveCamera ? camera.fov : referenceFov;
+    const fovScale =
+      Math.tan(THREE.MathUtils.degToRad(currentFov * 0.5)) /
+      Math.tan(THREE.MathUtils.degToRad(referenceFov * 0.5));
+    const distanceScale = cameraToTitleDistance / referenceDistance;
+    const compensatedScale = baseScale * distanceScale * fovScale;
 
     if (main) {
       main.position.x = mouse.x * 0.18;
       main.position.y = mouse.y * 0.1;
-      main.scale.setScalar(targetScale);
+      main.scale.setScalar(compensatedScale);
     }
 
     if (shadow) {
       shadow.position.x = -mouse.x * 0.09;
       shadow.position.y = -mouse.y * 0.05;
-      shadow.scale.setScalar(targetScale * variant.preset.rearOutlineScale);
+      shadow.scale.setScalar(
+        compensatedScale * variant.preset.rearOutlineScale,
+      );
     }
 
     if (titleMaterial) {
@@ -1056,6 +1158,17 @@ function SceneContents({
       (2 / 0.9),
     [size.width],
   );
+  const referenceCameraPosition = useMemo(
+    () => new THREE.Vector3(...VIEWS[0].position),
+    [],
+  );
+  const referenceDistance = useMemo(
+    () =>
+      referenceCameraPosition.distanceTo(
+        new THREE.Vector3(...universeTitlePosition),
+      ),
+    [referenceCameraPosition, universeTitlePosition],
+  );
 
   useFrame(({ pointer }, delta) => {
     targetMouse.current.set(pointer.x, pointer.y);
@@ -1086,10 +1199,12 @@ function SceneContents({
         variant={activeVariant}
         pointerState={pointerState}
         position={universeTitlePosition}
-        targetScale={universeTitleScale}
+        baseScale={universeTitleScale}
+        referenceDistance={referenceDistance}
+        referenceFov={50}
       />
       <EffectComposer enableNormalPass={false}>
-        <VhsSignalEffect noiseTexture={noiseTexture} />
+        <VhsSignalEffect noiseTexture={noiseTexture} settings={activeVariant.preset} />
       </EffectComposer>
     </>
   );

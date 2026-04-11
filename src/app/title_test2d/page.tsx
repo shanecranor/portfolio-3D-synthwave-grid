@@ -8,6 +8,8 @@ import {
   type VariantPreset,
 } from "./TitleTest2DScene";
 
+type ControlTab = "title" | "rear" | "vhs";
+
 const ICE_CHROME_INDEX = TITLE_TEST_2D_VARIANTS.findIndex(
   (variant) => variant.name === "Ice Chrome",
 );
@@ -73,10 +75,27 @@ const REAR_SLIDER_CONTROLS = [
   { key: "rearOutlineScale", label: "Outline Scale", min: 1, max: 1.15, step: 0.001, digits: 3 },
 ] as const;
 
+const VHS_SLIDER_CONTROLS = [
+  { key: "vhsFps", label: "Stepped FPS", min: 1, max: 60, step: 0.01, digits: 2 },
+  { key: "vhsTimebaseStrength", label: "Timebase Strength", min: 0, max: 3, step: 0.01, digits: 2 },
+  { key: "vhsChromaBleed", label: "Chroma Bleed", min: 0, max: 6, step: 0.01, digits: 2 },
+  { key: "vhsHeadswitchStrength", label: "Headswitch Strength", min: 0, max: 2, step: 0.01, digits: 2 },
+  { key: "vhsDropoutStrength", label: "Dropout Strength", min: 0, max: 2, step: 0.01, digits: 2 },
+  { key: "vhsNoiseStrength", label: "Noise Strength", min: 0, max: 2, step: 0.01, digits: 2 },
+] as const;
+
+const CONTROL_TABS: Array<{ id: ControlTab; label: string }> = [
+  { id: "title", label: "Title" },
+  { id: "rear", label: "Rear Text" },
+  { id: "vhs", label: "VHS" },
+];
+
 export default function Page() {
   const [activeIndex, setActiveIndex] = useState(ICE_CHROME_INDEX);
   const [icePreset, setIcePreset] = useState<VariantPreset>(DEFAULT_ICE_PRESET);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [activeTab, setActiveTab] = useState<ControlTab>("title");
 
   const variants = useMemo(
     () =>
@@ -165,6 +184,16 @@ export default function Page() {
       </div>
 
       <aside className="title-test-2d-page__controls">
+        <button
+          type="button"
+          className="title-test-2d-page__controls-toggle"
+          onClick={() => setControlsVisible((current) => !current)}
+        >
+          {controlsVisible ? "Hide Controls" : "Show Controls"}
+        </button>
+
+        {controlsVisible && (
+          <div className="title-test-2d-page__controls-panel">
         <div className="title-test-2d-page__controls-header">
           <div>
             <h2>Ice Chrome Controls</h2>
@@ -182,10 +211,27 @@ export default function Page() {
           </button>
         </div>
 
+        <div className="title-test-2d-page__tabs">
+          {CONTROL_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`title-test-2d-page__tab${
+                activeTab === tab.id ? " title-test-2d-page__tab--active" : ""
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="title-test-2d-page__controls-status">
           <span>{isIceChromeActive ? "Editing active preset" : "Editing preset 4 in background"}</span>
         </div>
 
+        {activeTab === "title" && (
+          <>
         <section className="title-test-2d-page__control-section">
           <h3>Toggles</h3>
           <div className="title-test-2d-page__toggle-list">
@@ -224,7 +270,11 @@ export default function Page() {
             ))}
           </div>
         </section>
+          </>
+        )}
 
+        {activeTab === "rear" && (
+          <>
         <section className="title-test-2d-page__control-section">
           <h3>Rear Text Toggles</h3>
           <div className="title-test-2d-page__toggle-list">
@@ -311,6 +361,34 @@ export default function Page() {
             ))}
           </div>
         </section>
+          </>
+        )}
+
+        {activeTab === "vhs" && (
+          <section className="title-test-2d-page__control-section">
+            <h3>VHS Sliders</h3>
+            <div className="title-test-2d-page__slider-list">
+              {VHS_SLIDER_CONTROLS.map((control) => (
+                <label key={control.key} className="title-test-2d-page__slider">
+                  <div className="title-test-2d-page__slider-header">
+                    <span>{control.label}</span>
+                    <code>{icePreset[control.key].toFixed(control.digits)}</code>
+                  </div>
+                  <input
+                    type="range"
+                    min={control.min}
+                    max={control.max}
+                    step={control.step}
+                    value={icePreset[control.key]}
+                    onChange={(event) =>
+                      updateIcePreset(control.key, Number(event.target.value))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="title-test-2d-page__controls-footer">
           <button
@@ -324,6 +402,8 @@ export default function Page() {
             {exportStatus ?? "Copies current Ice Chrome settings"}
           </span>
         </div>
+          </div>
+        )}
       </aside>
     </main>
   );
