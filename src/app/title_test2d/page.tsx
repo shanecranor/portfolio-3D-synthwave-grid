@@ -28,10 +28,20 @@ const COLOR_CONTROLS = [
   { key: "highlightTint", label: "Highlight" },
 ] as const;
 
+const REAR_COLOR_CONTROLS = [
+  { key: "rearGridColor", label: "Rear Grid" },
+  { key: "rearOutlineColor", label: "Rear Outline" },
+] as const;
+
 const TOGGLE_CONTROLS = [
   { key: "dividerEnabled", label: "Divider" },
   { key: "sheenEnabled", label: "Sheen" },
-  { key: "scanEnabled", label: "Scanlines" },
+  { key: "edgeSoftnessEnabled", label: "Edge Softness" },
+] as const;
+
+const REAR_TOGGLE_CONTROLS = [
+  { key: "rearGridEnabled", label: "Rear Grid" },
+  { key: "rearOutlineEnabled", label: "Rear Outline" },
 ] as const;
 
 const SLIDER_CONTROLS = [
@@ -44,17 +54,29 @@ const SLIDER_CONTROLS = [
   { key: "mountainPhase2", label: "Mountain Phase 2", min: 0, max: 6.283, step: 0.01, digits: 2 },
   { key: "reflectionMix", label: "Reflection Mix", min: 0, max: 1, step: 0.001, digits: 3 },
   { key: "sheenStrength", label: "Sheen Strength", min: 0, max: 2.5, step: 0.01, digits: 2 },
-  { key: "scanStrength", label: "Scan Strength", min: 0, max: 2.5, step: 0.01, digits: 2 },
   { key: "edgeSoftness", label: "Edge Softness", min: 0.02, max: 0.2, step: 0.001, digits: 3 },
+  { key: "edgeSoftnessOffset", label: "Edge Softness Offset", min: -0.25, max: 0.25, step: 0.001, digits: 3 },
   { key: "pointerInfluence", label: "Pointer Influence", min: 0, max: 2, step: 0.01, digits: 2 },
   { key: "dividerWidth", label: "Divider Width", min: 0.002, max: 0.05, step: 0.001, digits: 3 },
   { key: "dividerStrength", label: "Divider Strength", min: 0, max: 1.5, step: 0.01, digits: 2 },
   { key: "bandCurve", label: "Band Curve", min: 0.4, max: 2, step: 0.01, digits: 2 },
 ] as const;
 
+const REAR_SLIDER_CONTROLS = [
+  { key: "rearGridDensityX", label: "Grid Density X", min: 2, max: 40, step: 0.1, digits: 1 },
+  { key: "rearGridDensityY", label: "Grid Density Y", min: 2, max: 30, step: 0.1, digits: 1 },
+  { key: "rearGridWidth", label: "Grid Width", min: 0.002, max: 0.08, step: 0.001, digits: 3 },
+  { key: "rearGridAlpha", label: "Grid Alpha", min: 0, max: 1, step: 0.01, digits: 2 },
+  { key: "rearGridFade", label: "Grid Fade", min: 0.02, max: 0.4, step: 0.001, digits: 3 },
+  { key: "rearGridParallax", label: "Grid Parallax", min: 0, max: 0.15, step: 0.001, digits: 3 },
+  { key: "rearOutlineOpacity", label: "Outline Opacity", min: 0, max: 1, step: 0.01, digits: 2 },
+  { key: "rearOutlineScale", label: "Outline Scale", min: 1, max: 1.15, step: 0.001, digits: 3 },
+] as const;
+
 export default function Page() {
   const [activeIndex, setActiveIndex] = useState(ICE_CHROME_INDEX);
   const [icePreset, setIcePreset] = useState<VariantPreset>(DEFAULT_ICE_PRESET);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   const variants = useMemo(
     () =>
@@ -102,6 +124,22 @@ export default function Page() {
       ...current,
       [key]: value,
     }));
+  }
+
+  async function handleExport() {
+    const payload = `{
+  name: "Ice Chrome",
+  preset: ${JSON.stringify(icePreset, null, 2)}
+}`;
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setExportStatus("Copied preset to clipboard");
+      window.setTimeout(() => setExportStatus(null), 1800);
+    } catch {
+      setExportStatus("Clipboard export failed");
+      window.setTimeout(() => setExportStatus(null), 1800);
+    }
   }
 
   return (
@@ -188,6 +226,45 @@ export default function Page() {
         </section>
 
         <section className="title-test-2d-page__control-section">
+          <h3>Rear Text Toggles</h3>
+          <div className="title-test-2d-page__toggle-list">
+            {REAR_TOGGLE_CONTROLS.map((control) => (
+              <label key={control.key} className="title-test-2d-page__toggle">
+                <span>{control.label}</span>
+                <input
+                  type="checkbox"
+                  checked={icePreset[control.key]}
+                  onChange={(event) =>
+                    updateIcePreset(control.key, event.target.checked)
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="title-test-2d-page__control-section">
+          <h3>Rear Text Colors</h3>
+          <div className="title-test-2d-page__color-list">
+            {REAR_COLOR_CONTROLS.map((control) => (
+              <label key={control.key} className="title-test-2d-page__color">
+                <span>{control.label}</span>
+                <div className="title-test-2d-page__color-inputs">
+                  <input
+                    type="color"
+                    value={String(icePreset[control.key])}
+                    onChange={(event) =>
+                      updateIcePreset(control.key, event.target.value)
+                    }
+                  />
+                  <code>{String(icePreset[control.key])}</code>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="title-test-2d-page__control-section">
           <h3>Sliders</h3>
           <div className="title-test-2d-page__slider-list">
             {SLIDER_CONTROLS.map((control) => (
@@ -210,6 +287,43 @@ export default function Page() {
             ))}
           </div>
         </section>
+
+        <section className="title-test-2d-page__control-section">
+          <h3>Rear Text Sliders</h3>
+          <div className="title-test-2d-page__slider-list">
+            {REAR_SLIDER_CONTROLS.map((control) => (
+              <label key={control.key} className="title-test-2d-page__slider">
+                <div className="title-test-2d-page__slider-header">
+                  <span>{control.label}</span>
+                  <code>{icePreset[control.key].toFixed(control.digits)}</code>
+                </div>
+                <input
+                  type="range"
+                  min={control.min}
+                  max={control.max}
+                  step={control.step}
+                  value={icePreset[control.key]}
+                  onChange={(event) =>
+                    updateIcePreset(control.key, Number(event.target.value))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <div className="title-test-2d-page__controls-footer">
+          <button
+            type="button"
+            className="title-test-2d-page__export"
+            onClick={handleExport}
+          >
+            Export
+          </button>
+          <span className="title-test-2d-page__export-status">
+            {exportStatus ?? "Copies current Ice Chrome settings"}
+          </span>
+        </div>
       </aside>
     </main>
   );

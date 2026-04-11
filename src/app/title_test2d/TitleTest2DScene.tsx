@@ -1,10 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  forwardRef,
+  type MutableRefObject,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Center, useFont } from "@react-three/drei";
+import { Center, Stars, useFont } from "@react-three/drei";
+import { EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
+import { BlendFunction, Effect } from "postprocessing";
+import { CameraRig } from "@/components/3D/CameraRig";
+import { GlowSphere } from "@/components/3D/GlowSphere";
+import { NoisySphere } from "@/components/3D/NoisySphere";
+import { UniverseSkyDome } from "@/components/3D/UniverseSkyDome";
+import {
+  DEFAULT_UNIVERSE_ANCHOR_Y,
+  DEFAULT_UNIVERSE_ANCHOR_Z,
+  DEFAULT_UNIVERSE_TITLE_SCALE,
+  getUniverseTitleAnchorX,
+  getUniverseTitleScale,
+} from "@/components/3D/universeLayout";
 
 type PointerState = {
   mousePos: MutableRefObject<THREE.Vector2>;
@@ -31,7 +51,6 @@ export type VariantPreset = {
   mountainPhase2: number;
   reflectionMix: number;
   sheenStrength: number;
-  scanStrength: number;
   edgeSoftness: number;
   pointerInfluence: number;
   dividerWidth: number;
@@ -39,7 +58,20 @@ export type VariantPreset = {
   bandCurve: number;
   dividerEnabled: boolean;
   sheenEnabled: boolean;
-  scanEnabled: boolean;
+  edgeSoftnessEnabled: boolean;
+  edgeSoftnessOffset: number;
+  rearGridEnabled: boolean;
+  rearGridColor: THREE.ColorRepresentation;
+  rearGridDensityX: number;
+  rearGridDensityY: number;
+  rearGridWidth: number;
+  rearGridAlpha: number;
+  rearGridFade: number;
+  rearGridParallax: number;
+  rearOutlineEnabled: boolean;
+  rearOutlineColor: THREE.ColorRepresentation;
+  rearOutlineOpacity: number;
+  rearOutlineScale: number;
 };
 
 export type VariantConfig = {
@@ -47,6 +79,322 @@ export type VariantConfig = {
   name: string;
   preset: VariantPreset;
 };
+
+const UNIVERSE_EDGE_COLOR = [209, 109, 169];
+const UNIVERSE_SPHERE_GLOW_COLOR = [69, 49, 99];
+
+const VHS_EFFECT_SHADER = `
+uniform sampler2D uNoiseTexture;
+uniform float uTime;
+
+#define V vec2(0.0, 1.0)
+#define VHS_PI 3.14159265
+#define VHS_RES vec2(320.0, 240.0)
+#define vhsSaturate(i) clamp(i, 0.0, 1.0)
+#define vhsValidUv(v) (abs((v).x - 0.5) < 0.5 && abs((v).y - 0.5) < 0.5)
+
+#define LUMA_SAMPLES 7
+#define CHROMA_SAMPLES 5
+#define TIMEBASE_STRENGTH 1.0
+#define CHROMA_BLEED 2.3
+#define HEADSWITCH_STRENGTH 0.9
+#define DROPOUT_STRENGTH 1.0
+#define NOISE_STRENGTH 0.65
+
+float v2random(vec2 uv) {
+  return texture(uNoiseTexture, fract(uv)).x;
+}
+
+vec3 v3random(vec2 uv) {
+  return texture(uNoiseTexture, fract(uv)).xyz;
+}
+
+mat2 rotate2D(float t) {
+  return mat2(cos(t), sin(t), -sin(t), cos(t));
+}
+
+vec3 rgb2yiq(vec3 rgb) {
+  return mat3(
+    0.299,  0.596,  0.211,
+    0.587, -0.274, -0.523,
+    0.114, -0.322,  0.312
+  ) * rgb;
+}
+
+vec3 yiq2rgb(vec3 yiq) {
+  return mat3(
+    1.000,  1.000,  1.000,
+    0.956, -0.272, -1.106,
+    0.621, -0.647,  1.703
+  ) * yiq;
+}
+
+vec3 fetchSource(vec2 uv) {
+  if (!vhsValidUv(uv)) {
+    return vec3(0.03, 0.03, 0.035);
+  }
+
+  vec2 quv = (floor(uv * VHS_RES) + 0.5) / VHS_RES;
+  return texture(inputBuffer, quv).xyz;
+}
+
+float trackingWarp(float y, float time) {
+  float slowDrift = v2random(vec2(floor(time * 0.35) * 0.013, 0.17)) * 2.0 - 1.0;
+  float lineLfo = sin(y * VHS_PI * 2.0 * 1.25 + time * 0.9 + slowDrift * 1.7);
+  float lineNoise = v2random(vec2(y * 0.85, time * 0.11)) * 2.0 - 1.0;
+  return (slowDrift * 1.25 + lineLfo * 0.8 + lineNoise * 0.45) * 0.75;
+}
+
+float lineTimebaseOffset(float y, float time) {
+  float coarse = v2random(vec2(y * 0.21, floor(time * 1.4) * 0.031)) * 2.0 - 1.0;
+  float medium = v2random(vec2(y * 2.7, time * 0.7)) * 2.0 - 1.0;
+  float fine = v2random(vec2(y * 24.0, floor(time * 16.0) * 0.071)) * 2.0 - 1.0;
+  float wobble = sin(y * VHS_PI * 2.0 * 2.4 + time * 2.1 + coarse * 2.2);
+  return TIMEBASE_STRENGTH * (coarse * 2.5 + medium * 1.0 + fine * 0.35 + wobble * 0.85);
+}
+
+float chromaPhaseError(float y, float time) {
+  float phaseJump = v2random(vec2(floor(time * 2.0) * 0.047, y * 1.8)) * 2.0 - 1.0;
+  float flutter = v2random(vec2(y * 6.3, time * 0.55)) * 2.0 - 1.0;
+  return phaseJump * 0.14 + flutter * 0.045;
+}
+
+float headSwitchMask(float y, float time) {
+  float band = smoothstep(1.0 - 16.0 / VHS_RES.y, 1.0 - 8.0 / VHS_RES.y, y);
+  float flicker = 0.8 + 0.2 * v2random(vec2(floor(time * 30.0) * 0.019, 0.23));
+  return band * flicker;
+}
+
+float dropoutMask(vec2 uv, float time) {
+  float lineId = floor(uv.y * VHS_RES.y);
+  float eventSeed = floor(time * 9.0);
+  float event = smoothstep(0.82, 0.985, v2random(vec2(eventSeed * 0.017, 0.61)));
+  float lineSelect = smoothstep(0.74, 0.96, v2random(vec2(lineId * 0.043, eventSeed * 0.071)));
+  float start = v2random(vec2(lineId * 0.011, eventSeed * 0.093));
+  float length = 0.03 + 0.18 * v2random(vec2(lineId * 0.019, eventSeed * 0.057));
+  float xMask = smoothstep(start - 0.01, start, uv.x) *
+                (1.0 - smoothstep(start + length, start + length + 0.01, uv.x));
+  return event * lineSelect * xMask;
+}
+
+float sampleLuma(vec2 uv) {
+  float texel = 1.0 / VHS_RES.x;
+  float accum = 0.0;
+  float total = 0.0;
+
+  for (int i = 0; i < LUMA_SAMPLES; i++) {
+    float fi = float(i) - float(LUMA_SAMPLES - 1) * 0.5;
+    float w = 1.0 / (1.0 + fi * fi * 0.9);
+    vec3 yiq = rgb2yiq(fetchSource(uv + vec2(fi * texel * 0.55, 0.0)));
+    accum += yiq.x * w;
+    total += w;
+  }
+
+  return accum / max(total, 1e-4);
+}
+
+vec2 sampleChromaIQ(vec2 uv, float chromaOffset, float blurAmount) {
+  float texel = 1.0 / VHS_RES.x;
+  vec2 accum = vec2(0.0);
+  float total = 0.0;
+
+  for (int i = 0; i < CHROMA_SAMPLES; i++) {
+    float fi = float(i) - float(CHROMA_SAMPLES - 1) * 0.5;
+    float w = 1.0 / (1.0 + fi * fi * 0.45);
+    vec2 sampleUv = uv + vec2((fi * blurAmount + chromaOffset) * texel, 0.0);
+    vec3 yiq = rgb2yiq(fetchSource(sampleUv));
+    accum += yiq.yz * w;
+    total += w;
+  }
+
+  return accum / max(total, 1e-4);
+}
+
+vec3 sampleCompositeLike(vec2 uv, float time) {
+  float phase = chromaPhaseError(uv.y, time);
+  float chromaLag = CHROMA_BLEED * (0.85 + 0.3 * v2random(vec2(uv.y * 3.1, floor(time * 2.0) * 0.083)));
+  float chromaBlur = 1.5 + 0.9 * abs(phase) * 10.0;
+
+  float y = sampleLuma(uv);
+  vec2 iq = sampleChromaIQ(uv, chromaLag, chromaBlur);
+  iq = rotate2D(phase) * iq;
+
+  return vec3(y, iq);
+}
+
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  float time = uTime;
+  vec2 vhsUv = (floor(uv * VHS_RES) + 0.5) / VHS_RES;
+
+  float verticalDrift = trackingWarp(vhsUv.y, time);
+  float lineOffset = lineTimebaseOffset(vhsUv.y, time);
+  float headSwitch = headSwitchMask(vhsUv.y, time);
+
+  float headSwitchShift = HEADSWITCH_STRENGTH *
+    headSwitch *
+    ((v2random(vec2(floor(vhsUv.y * VHS_RES.y) * 0.013, floor(time * 30.0) * 0.17)) * 2.0 - 1.0) * 9.0);
+
+  vec2 sampleUv = vhsUv;
+  sampleUv.y += verticalDrift / VHS_RES.y;
+  sampleUv.x += (lineOffset + headSwitchShift) / VHS_RES.x;
+
+  vec3 yiq = sampleCompositeLike(sampleUv, time);
+
+  float hsNoise = v2random(vec2(sampleUv.x * 7.0 + time * 4.0, sampleUv.y * 43.0));
+  yiq.x += (hsNoise - 0.5) * 0.12 * headSwitch * HEADSWITCH_STRENGTH;
+  yiq.yz *= 1.0 - headSwitch * 0.45 * HEADSWITCH_STRENGTH;
+  yiq.x *= 1.0 - headSwitch * 0.12 * HEADSWITCH_STRENGTH;
+
+  float dropout = dropoutMask(sampleUv, time) * DROPOUT_STRENGTH;
+  if (dropout > 0.0) {
+    float spark = v2random(vec2(sampleUv.x * 15.0 + time * 23.0, floor(sampleUv.y * VHS_RES.y) * 0.031));
+    yiq.x = mix(yiq.x, 0.86 + spark * 0.28, dropout * 0.85);
+    yiq.yz *= 1.0 - dropout;
+  }
+
+  float creaseEvent = smoothstep(0.88, 0.985, v2random(vec2(floor(time * 1.7) * 0.053, 0.91)));
+  float creaseLine = smoothstep(0.65, 0.98, v2random(vec2(vhsUv.y * 5.7, floor(time * 12.0) * 0.067)));
+  float crease = creaseEvent * creaseLine;
+  if (crease > 0.0) {
+    float whiteSpeck = v2random(vec2(sampleUv * vec2(13.0, 47.0) + time * vec2(9.0, 2.0)));
+    yiq.x = mix(yiq.x, 1.0 + whiteSpeck * 0.25, crease * smoothstep(0.82, 1.0, whiteSpeck) * 0.8);
+  }
+
+  float gain = 0.98 + 0.05 * (v2random(vec2(floor(time * 4.0) * 0.031, 0.13)) - 0.5);
+  float rf = v2random(vec2(sampleUv.x * 55.0 + time * 21.0, sampleUv.y * 3.3 + time * 1.7)) - 0.5;
+  yiq.x = yiq.x * gain + rf * 0.035 * NOISE_STRENGTH;
+  yiq.yz += (v3random(vec2(sampleUv.y * 9.0, time * 0.9)).xy - 0.5) * 0.01 * NOISE_STRENGTH;
+
+  yiq = vec3(0.02, -0.01, 0.0) + yiq * vec3(0.98, 0.92, 0.92);
+
+  vec3 col = yiq2rgb(yiq);
+  col = vhsSaturate(col);
+  col = pow(col, vec3(1.02));
+
+  outputColor = vec4(col, inputColor.a);
+}
+`;
+
+function createNoiseTexture(size = 256) {
+  const data = new Uint8Array(size * size * 4);
+
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.floor(Math.random() * 256);
+    data[i + 1] = Math.floor(Math.random() * 256);
+    data[i + 2] = Math.floor(Math.random() * 256);
+    data[i + 3] = 255;
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+class VhsSignalEffectImpl extends Effect {
+  constructor(noiseTexture: THREE.Texture) {
+    super("VhsSignalEffect", VHS_EFFECT_SHADER, {
+      blendFunction: BlendFunction.NORMAL,
+      uniforms: new Map<string, THREE.Uniform>([
+        ["uTime", new THREE.Uniform(0)],
+        ["uNoiseTexture", new THREE.Uniform(noiseTexture)],
+      ]),
+    });
+  }
+
+  override update(
+    _renderer: THREE.WebGLRenderer,
+    _inputBuffer: THREE.WebGLRenderTarget,
+    deltaTime: number,
+  ) {
+    const timeUniform = this.uniforms.get("uTime");
+    if (timeUniform) {
+      timeUniform.value += deltaTime;
+    }
+  }
+}
+
+const VhsSignalEffect = forwardRef<Effect, { noiseTexture: THREE.Texture }>(
+  function VhsSignalEffect({ noiseTexture }, ref) {
+    const effect = useMemo(
+      () => new VhsSignalEffectImpl(noiseTexture),
+      [noiseTexture],
+    );
+
+    useEffect(() => {
+      return () => effect.dispose();
+    }, [effect]);
+
+    return <primitive ref={ref} object={effect} dispose={null} />;
+  },
+);
+
+function RotatingStars() {
+  const starfieldRef = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    const starfield = starfieldRef.current;
+    if (!starfield) return;
+
+    starfield.rotation.y += delta * 0.03;
+    starfield.rotation.x = THREE.MathUtils.lerp(
+      starfield.rotation.x,
+      0.12,
+      1 - Math.exp(-2 * delta),
+    );
+  });
+
+  return (
+    <group ref={starfieldRef}>
+      <Stars
+        radius={50}
+        depth={500}
+        count={2000}
+        factor={5}
+        saturation={1}
+        speed={0}
+      />
+    </group>
+  );
+}
+
+function UniverseBackgroundSphere() {
+  const edgeColor = useMemo(
+    () =>
+      new THREE.Color(...UNIVERSE_EDGE_COLOR.map((channel) => channel / 255)),
+    [],
+  );
+  const glowColor = useMemo(
+    () =>
+      new THREE.Color(
+        ...UNIVERSE_SPHERE_GLOW_COLOR.map((channel) => channel / 255),
+      ),
+    [],
+  );
+
+  return (
+    <>
+      <NoisySphere
+        radius={10}
+        widthSegments={180}
+        heightSegments={70}
+        noiseAmount={0.3}
+        edgeColor={edgeColor}
+        flatCenter
+        poleNoiseFloor={0}
+        equatorPower={0.85}
+        yNoiseScale={0.4}
+        displaceYScale={0}
+        cylinderMorph={0.25}
+      />
+      <GlowSphere radius={10} glowColor={glowColor} />
+    </>
+  );
+}
 
 const TITLE_TEXT = "SHANE CRANOR";
 
@@ -86,7 +434,6 @@ uniform float uMountainPhase1;
 uniform float uMountainPhase2;
 uniform float uReflectionMix;
 uniform float uSheenStrength;
-uniform float uScanStrength;
 uniform float uEdgeSoftness;
 uniform float uPointerInfluence;
 uniform float uDividerWidth;
@@ -94,7 +441,8 @@ uniform float uDividerStrength;
 uniform float uBandCurve;
 uniform float uDividerEnabled;
 uniform float uSheenEnabled;
-uniform float uScanEnabled;
+uniform float uEdgeSoftnessEnabled;
+uniform float uEdgeSoftnessOffset;
 
 varying vec3 vObjectPosition;
 
@@ -165,12 +513,12 @@ void main() {
   color += mix(vec3(1.0), uHighlightTint, 0.4) * centerFlash * (0.09 * uSheenStrength * uSheenEnabled);
 
   float edgeDistance = min(min(across, 1.0 - across), min(topDown, 1.0 - topDown));
-  float edgeMask = smoothstep(0.0, uEdgeSoftness, edgeDistance);
-  color = mix(uShadowTint, color, edgeMask);
-
-  float scan = 0.5 + 0.5 * sin((topDown * 86.0 - uTime * 0.16) * 6.28318530718);
-  float scanMask = smoothstep(0.64, 1.0, scan);
-  color += mix(uHighlightTint, vec3(1.0), 0.45) * scanMask * (0.015 * uScanStrength * uScanEnabled);
+  float edgeMask = smoothstep(
+    uEdgeSoftnessOffset,
+    uEdgeSoftnessOffset + max(0.0001, uEdgeSoftness),
+    edgeDistance
+  );
+  color = mix(color, mix(uShadowTint, color, edgeMask), uEdgeSoftnessEnabled);
 
   gl_FragColor = vec4(max(color, vec3(0.0)), 1.0);
 }
@@ -182,6 +530,14 @@ uniform float uBoundsMaxX;
 uniform float uBoundsMinY;
 uniform float uBoundsMaxY;
 uniform vec2 uMouse;
+uniform vec3 uGridColor;
+uniform float uGridDensityX;
+uniform float uGridDensityY;
+uniform float uGridWidth;
+uniform float uGridAlpha;
+uniform float uGridFade;
+uniform float uGridParallax;
+uniform float uGridEnabled;
 
 varying vec3 vObjectPosition;
 
@@ -199,17 +555,17 @@ void main() {
   float across = inverseLerp(uBoundsMinX, uBoundsMaxX, vObjectPosition.x);
   float topDown = inverseLerp(uBoundsMaxY, uBoundsMinY, vObjectPosition.y);
 
-  float shiftedAcross = across + uMouse.x * 0.04;
-  float shiftedDown = topDown - uMouse.y * 0.04;
+  float shiftedAcross = across + uMouse.x * uGridParallax;
+  float shiftedDown = topDown - uMouse.y * uGridParallax;
 
-  float verticalLines = gridLine(shiftedAcross, 19.0, 0.024);
-  float horizontalLines = gridLine(shiftedDown, 12.0, 0.024);
+  float verticalLines = gridLine(shiftedAcross, uGridDensityX, uGridWidth);
+  float horizontalLines = gridLine(shiftedDown, uGridDensityY, uGridWidth);
   float grid = max(verticalLines, horizontalLines);
 
-  float fade = smoothstep(0.0, 0.16, min(min(across, 1.0 - across), min(topDown, 1.0 - topDown)));
-  float alpha = grid * 0.22 * fade;
+  float fade = smoothstep(0.0, max(0.0001, uGridFade), min(min(across, 1.0 - across), min(topDown, 1.0 - topDown)));
+  float alpha = grid * uGridAlpha * fade * uGridEnabled;
 
-  gl_FragColor = vec4(vec3(1.0), alpha);
+  gl_FragColor = vec4(uGridColor, alpha);
 }
 `;
 
@@ -236,7 +592,6 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       mountainPhase2: 1.8,
       reflectionMix: 0.34,
       sheenStrength: 1,
-      scanStrength: 0.9,
       edgeSoftness: 0.085,
       pointerInfluence: 0.55,
       dividerWidth: 0.018,
@@ -244,7 +599,20 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       bandCurve: 1.34,
       dividerEnabled: true,
       sheenEnabled: true,
-      scanEnabled: true,
+      edgeSoftnessEnabled: true,
+      edgeSoftnessOffset: 0,
+      rearGridEnabled: true,
+      rearGridColor: "#ffffff",
+      rearGridDensityX: 19,
+      rearGridDensityY: 12,
+      rearGridWidth: 0.024,
+      rearGridAlpha: 0.22,
+      rearGridFade: 0.16,
+      rearGridParallax: 0.04,
+      rearOutlineEnabled: true,
+      rearOutlineColor: "#ffffff",
+      rearOutlineOpacity: 0.9,
+      rearOutlineScale: 1.035,
     },
   },
   {
@@ -269,7 +637,6 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       mountainPhase2: 1.12,
       reflectionMix: 0.22,
       sheenStrength: 1.34,
-      scanStrength: 0.45,
       edgeSoftness: 0.06,
       pointerInfluence: 0.42,
       dividerWidth: 0.008,
@@ -277,7 +644,20 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       bandCurve: 0.72,
       dividerEnabled: true,
       sheenEnabled: true,
-      scanEnabled: true,
+      edgeSoftnessEnabled: true,
+      edgeSoftnessOffset: 0,
+      rearGridEnabled: true,
+      rearGridColor: "#ffffff",
+      rearGridDensityX: 15,
+      rearGridDensityY: 9,
+      rearGridWidth: 0.02,
+      rearGridAlpha: 0.18,
+      rearGridFade: 0.12,
+      rearGridParallax: 0.03,
+      rearOutlineEnabled: true,
+      rearOutlineColor: "#ffffff",
+      rearOutlineOpacity: 0.82,
+      rearOutlineScale: 1.03,
     },
   },
   {
@@ -302,7 +682,6 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       mountainPhase2: 2.4,
       reflectionMix: 0.62,
       sheenStrength: 1.58,
-      scanStrength: 1.55,
       edgeSoftness: 0.11,
       pointerInfluence: 0.9,
       dividerWidth: 0.024,
@@ -310,7 +689,20 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       bandCurve: 1.12,
       dividerEnabled: true,
       sheenEnabled: true,
-      scanEnabled: true,
+      edgeSoftnessEnabled: true,
+      edgeSoftnessOffset: 0,
+      rearGridEnabled: true,
+      rearGridColor: "#ffdfff",
+      rearGridDensityX: 22,
+      rearGridDensityY: 14,
+      rearGridWidth: 0.028,
+      rearGridAlpha: 0.28,
+      rearGridFade: 0.18,
+      rearGridParallax: 0.05,
+      rearOutlineEnabled: true,
+      rearOutlineColor: "#fff5ff",
+      rearOutlineOpacity: 0.94,
+      rearOutlineScale: 1.04,
     },
   },
   {
@@ -335,7 +727,6 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       mountainPhase2: 1.4,
       reflectionMix: 0.54,
       sheenStrength: 1.18,
-      scanStrength: 0.72,
       edgeSoftness: 0.07,
       pointerInfluence: 1.05,
       dividerWidth: 0.012,
@@ -343,7 +734,20 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       bandCurve: 0.86,
       dividerEnabled: true,
       sheenEnabled: true,
-      scanEnabled: true,
+      edgeSoftnessEnabled: true,
+      edgeSoftnessOffset: 0,
+      rearGridEnabled: true,
+      rearGridColor: "#ffffff",
+      rearGridDensityX: 19,
+      rearGridDensityY: 12,
+      rearGridWidth: 0.024,
+      rearGridAlpha: 0.22,
+      rearGridFade: 0.16,
+      rearGridParallax: 0.04,
+      rearOutlineEnabled: true,
+      rearOutlineColor: "#ffffff",
+      rearOutlineOpacity: 0.9,
+      rearOutlineScale: 1.035,
     },
   },
 ];
@@ -375,7 +779,6 @@ function applyVariantPreset(
   material.uniforms.uMountainPhase2.value = preset.mountainPhase2;
   material.uniforms.uReflectionMix.value = preset.reflectionMix;
   material.uniforms.uSheenStrength.value = preset.sheenStrength;
-  material.uniforms.uScanStrength.value = preset.scanStrength;
   material.uniforms.uEdgeSoftness.value = preset.edgeSoftness;
   material.uniforms.uPointerInfluence.value = preset.pointerInfluence;
   material.uniforms.uDividerWidth.value = preset.dividerWidth;
@@ -383,19 +786,22 @@ function applyVariantPreset(
   material.uniforms.uBandCurve.value = preset.bandCurve;
   material.uniforms.uDividerEnabled.value = preset.dividerEnabled ? 1 : 0;
   material.uniforms.uSheenEnabled.value = preset.sheenEnabled ? 1 : 0;
-  material.uniforms.uScanEnabled.value = preset.scanEnabled ? 1 : 0;
+  material.uniforms.uEdgeSoftnessEnabled.value = preset.edgeSoftnessEnabled
+    ? 1
+    : 0;
+  material.uniforms.uEdgeSoftnessOffset.value = preset.edgeSoftnessOffset;
 }
 
 function FlatTitleVariant({
   variant,
   pointerState,
   position,
-  maxWidth,
+  targetScale,
 }: {
   variant: VariantConfig;
   pointerState: PointerState;
   position: [number, number, number];
-  maxWidth: number;
+  targetScale: number;
 }) {
   const rootRef = useRef<THREE.Group>(null);
   const mainRef = useRef<THREE.Group>(null);
@@ -403,7 +809,6 @@ function FlatTitleVariant({
   const titleMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const shadowMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const font = useFont("/AAReg.json");
-  const { size } = useThree();
 
   const config = useMemo(
     () => ({
@@ -423,9 +828,11 @@ function FlatTitleVariant({
     boundsMaxX,
     boundsMinY,
     boundsMaxY,
-    width,
   } = useMemo(() => {
-    const nextGeometry = new TextGeometry(TITLE_TEXT, config);
+    const nextGeometry = new TextGeometry(
+      TITLE_TEXT,
+      config as unknown as ConstructorParameters<typeof TextGeometry>[1],
+    );
     nextGeometry.computeBoundingBox();
     const bounds = nextGeometry.boundingBox ?? new THREE.Box3();
     const nextEdges = new THREE.EdgesGeometry(nextGeometry);
@@ -437,17 +844,8 @@ function FlatTitleVariant({
       boundsMaxX: bounds.max.x,
       boundsMinY: bounds.min.y,
       boundsMaxY: bounds.max.y,
-      width: bounds.max.x - bounds.min.x,
     };
   }, [config]);
-
-  const fitScale = useMemo(() => {
-    const availableWidth = maxWidth * 0.82;
-    return Math.min(
-      availableWidth / Math.max(width, 0.001),
-      size.width < 900 ? 0.92 : 1,
-    );
-  }, [maxWidth, size.width, width]);
 
   const titleUniforms = useMemo(
     () => ({
@@ -477,7 +875,6 @@ function FlatTitleVariant({
       uMountainPhase2: { value: variant.preset.mountainPhase2 },
       uReflectionMix: { value: variant.preset.reflectionMix },
       uSheenStrength: { value: variant.preset.sheenStrength },
-      uScanStrength: { value: variant.preset.scanStrength },
       uEdgeSoftness: { value: variant.preset.edgeSoftness },
       uPointerInfluence: { value: variant.preset.pointerInfluence },
       uDividerWidth: { value: variant.preset.dividerWidth },
@@ -485,7 +882,10 @@ function FlatTitleVariant({
       uBandCurve: { value: variant.preset.bandCurve },
       uDividerEnabled: { value: variant.preset.dividerEnabled ? 1 : 0 },
       uSheenEnabled: { value: variant.preset.sheenEnabled ? 1 : 0 },
-      uScanEnabled: { value: variant.preset.scanEnabled ? 1 : 0 },
+      uEdgeSoftnessEnabled: {
+        value: variant.preset.edgeSoftnessEnabled ? 1 : 0,
+      },
+      uEdgeSoftnessOffset: { value: variant.preset.edgeSoftnessOffset },
     }),
     [boundsMaxX, boundsMaxY, boundsMinX, boundsMinY, variant.preset],
   );
@@ -497,8 +897,16 @@ function FlatTitleVariant({
       uBoundsMaxX: { value: boundsMaxX },
       uBoundsMinY: { value: boundsMinY },
       uBoundsMaxY: { value: boundsMaxY },
+      uGridColor: { value: createUniformColor(variant.preset.rearGridColor) },
+      uGridDensityX: { value: variant.preset.rearGridDensityX },
+      uGridDensityY: { value: variant.preset.rearGridDensityY },
+      uGridWidth: { value: variant.preset.rearGridWidth },
+      uGridAlpha: { value: variant.preset.rearGridAlpha },
+      uGridFade: { value: variant.preset.rearGridFade },
+      uGridParallax: { value: variant.preset.rearGridParallax },
+      uGridEnabled: { value: variant.preset.rearGridEnabled ? 1 : 0 },
     }),
-    [boundsMaxX, boundsMaxY, boundsMinX, boundsMinY],
+    [boundsMaxX, boundsMaxY, boundsMinX, boundsMinY, variant.preset],
   );
 
   useFrame(({ clock }) => {
@@ -511,13 +919,13 @@ function FlatTitleVariant({
     if (main) {
       main.position.x = mouse.x * 0.18;
       main.position.y = mouse.y * 0.1;
-      main.scale.setScalar(fitScale);
+      main.scale.setScalar(targetScale);
     }
 
     if (shadow) {
       shadow.position.x = -mouse.x * 0.09;
       shadow.position.y = -mouse.y * 0.05;
-      shadow.scale.setScalar(fitScale * 1.035);
+      shadow.scale.setScalar(targetScale * variant.preset.rearOutlineScale);
     }
 
     if (titleMaterial) {
@@ -534,6 +942,24 @@ function FlatTitleVariant({
     const titleMaterial = titleMaterialRef.current;
     if (!titleMaterial) return;
     applyVariantPreset(titleMaterial, variant.preset);
+  }, [variant.preset]);
+
+  useEffect(() => {
+    const shadowMaterial = shadowMaterialRef.current;
+    if (!shadowMaterial) return;
+    shadowMaterial.uniforms.uGridColor.value.set(variant.preset.rearGridColor);
+    shadowMaterial.uniforms.uGridDensityX.value =
+      variant.preset.rearGridDensityX;
+    shadowMaterial.uniforms.uGridDensityY.value =
+      variant.preset.rearGridDensityY;
+    shadowMaterial.uniforms.uGridWidth.value = variant.preset.rearGridWidth;
+    shadowMaterial.uniforms.uGridAlpha.value = variant.preset.rearGridAlpha;
+    shadowMaterial.uniforms.uGridFade.value = variant.preset.rearGridFade;
+    shadowMaterial.uniforms.uGridParallax.value =
+      variant.preset.rearGridParallax;
+    shadowMaterial.uniforms.uGridEnabled.value = variant.preset.rearGridEnabled
+      ? 1
+      : 0;
   }, [variant.preset]);
 
   useEffect(() => {
@@ -560,9 +986,13 @@ function FlatTitleVariant({
           </mesh>
           <lineSegments geometry={edgesGeometry} renderOrder={2}>
             <lineBasicMaterial
-              color="#ffffff"
+              color={variant.preset.rearOutlineColor}
               transparent
-              opacity={0.9}
+              opacity={
+                variant.preset.rearOutlineEnabled
+                  ? variant.preset.rearOutlineOpacity
+                  : 0
+              }
               depthWrite={false}
             />
           </lineSegments>
@@ -594,15 +1024,37 @@ function FlatTitleVariant({
   );
 }
 
-function SceneContents({ activeVariant }: { activeVariant: VariantConfig }) {
+function SceneContents({
+  activeVariant,
+  viewIndex,
+}: {
+  activeVariant: VariantConfig;
+  viewIndex: number;
+}) {
   const mousePos = useRef(new THREE.Vector2(0, 0));
   const mouseVel = useRef(new THREE.Vector2(0, 0));
   const targetMouse = useRef(new THREE.Vector2(0, 0));
   const pointerState = { mousePos, mouseVel, targetMouse };
-  const { viewport } = useThree();
+  const { size } = useThree();
+  const noiseTexture = useMemo(() => createNoiseTexture(), []);
   const variantSignature = useMemo(
     () => `${activeVariant.id}:${JSON.stringify(activeVariant.preset)}`,
     [activeVariant],
+  );
+  const universeTitlePosition = useMemo(
+    () =>
+      [
+        getUniverseTitleAnchorX(size.width, DEFAULT_UNIVERSE_TITLE_SCALE),
+        DEFAULT_UNIVERSE_ANCHOR_Y,
+        DEFAULT_UNIVERSE_ANCHOR_Z,
+      ] as [number, number, number],
+    [size.width],
+  );
+  const universeTitleScale = useMemo(
+    () =>
+      getUniverseTitleScale(size.width, DEFAULT_UNIVERSE_TITLE_SCALE) *
+      (2 / 0.9),
+    [size.width],
   );
 
   useFrame(({ pointer }, delta) => {
@@ -619,15 +1071,26 @@ function SceneContents({ activeVariant }: { activeVariant: VariantConfig }) {
     mousePos.current.addScaledVector(mouseVel.current, delta);
   });
 
+  useEffect(() => {
+    return () => noiseTexture.dispose();
+  }, [noiseTexture]);
+
   return (
     <>
+      <CameraRig viewIndex={viewIndex} />
+      <UniverseSkyDome />
+      <UniverseBackgroundSphere />
+      <RotatingStars />
       <FlatTitleVariant
         key={variantSignature}
         variant={activeVariant}
         pointerState={pointerState}
-        position={[0, 0, 0]}
-        maxWidth={viewport.width}
+        position={universeTitlePosition}
+        targetScale={universeTitleScale}
       />
+      <EffectComposer enableNormalPass={false}>
+        <VhsSignalEffect noiseTexture={noiseTexture} />
+      </EffectComposer>
     </>
   );
 }
@@ -637,14 +1100,38 @@ export function TitleTest2DScene({
 }: {
   activeVariant: VariantConfig;
 }) {
+  const [viewIndex, setViewIndex] = useState(0);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLButtonElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setViewIndex((current) => (current + 1) % 3);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <Canvas
-      camera={{ position: [0, 0, 14], fov: 28, near: 0.1, far: 100 }}
+      camera={{ position: [0, 10.3, 0], fov: 50, near: 0.1, far: 1000 }}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
     >
       <color attach="background" args={["#030611"]} />
-      <SceneContents activeVariant={activeVariant} />
+      <SceneContents activeVariant={activeVariant} viewIndex={viewIndex} />
     </Canvas>
   );
 }
