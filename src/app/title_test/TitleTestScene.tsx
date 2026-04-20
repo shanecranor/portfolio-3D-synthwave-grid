@@ -403,7 +403,10 @@ function ShaderTitleVariant({
 
   const { geometry, boundsMinX, boundsMaxX, boundsMinY, boundsMaxY } =
     useMemo(() => {
-    const textGeometry = new TextGeometry(text, config);
+    const textGeometry = new TextGeometry(
+      text,
+      config as unknown as ConstructorParameters<typeof TextGeometry>[1],
+    );
     textGeometry.computeBoundingBox();
     const bounds = textGeometry.boundingBox ?? new THREE.Box3();
     return {

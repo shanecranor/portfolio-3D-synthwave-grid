@@ -2,7 +2,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { simplexNoise3D } from "./simplex";
-import { MeshTransmissionMaterial } from "@react-three/drei";
+
+type ThreeColorValue = THREE.ColorRepresentation | [number, number, number];
 
 function simplexNoise3DFractal(
   x: number,
@@ -142,7 +143,8 @@ type NoisySphereProps = {
   heightSegments?: number;
   noiseAmount?: number;
   rotation?: [number, number, number];
-  edgeColor?: THREE.Color;
+  fillColor?: ThreeColorValue;
+  edgeColor?: ThreeColorValue;
   edgeThreshold?: number;
   edgeLineWidth?: number;
   flatCenter?: boolean;
@@ -160,6 +162,7 @@ export function NoisySphere({
   heightSegments = 90,
   noiseAmount = 0.08,
   rotation = [0, 0, Math.PI / 2],
+  fillColor = [0.015, 0.005, 0.01],
   edgeColor,
   flatCenter = true,
   poleNoiseFloor = 0.25,
@@ -216,7 +219,7 @@ export function NoisySphere({
         // scale={[0.998, 0.998, 0.998]}
         scale={0.999}
       >
-        <meshBasicMaterial color={[0.015, 0.005, 0.01]} />
+        <meshBasicMaterial color={fillColor} />
         {/* <MeshTransmissionMaterial
           backside
           samples={4}

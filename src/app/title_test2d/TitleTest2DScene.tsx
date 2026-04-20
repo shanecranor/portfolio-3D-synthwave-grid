@@ -5,15 +5,17 @@ import {
   useMemo,
   useRef,
   useState,
-  forwardRef,
   type MutableRefObject,
 } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Center, Stars, useFont } from "@react-three/drei";
-import { EffectComposer } from "@react-three/postprocessing";
+import { Canvas, createPortal, useFrame, useThree } from "@react-three/fiber";
+import {
+  Center,
+  Stars,
+  useFBO,
+  useFont,
+} from "@react-three/drei";
 import * as THREE from "three";
 import { TextGeometry } from "three/examples/jsm/Addons.js";
-import { BlendFunction, Effect } from "postprocessing";
 import { CameraRig, VIEWS } from "@/components/3D/CameraRig";
 import { GlowSphere } from "@/components/3D/GlowSphere";
 import { NoisySphere } from "@/components/3D/NoisySphere";
@@ -99,6 +101,8 @@ const DEFAULT_VHS_SETTINGS = {
 } as const;
 
 const VHS_EFFECT_SHADER = `
+varying vec2 vUv;
+uniform sampler2D uSourceTexture;
 uniform sampler2D uNoiseTexture;
 uniform float uSteppedTime;
 uniform float uContinuousTime;
@@ -110,7 +114,7 @@ uniform float uVhsNoiseStrength;
 
 #define V vec2(0.0, 1.0)
 #define VHS_PI 3.14159265
-#define VHS_RES vec2(320.0, 240.0)
+#define VHS_RES vec2(333.0, 480.0)
 #define vhsSaturate(i) clamp(i, 0.0, 1.0)
 #define vhsValidUv(v) (abs((v).x - 0.5) < 0.5 && abs((v).y - 0.5) < 0.5)
 
@@ -150,7 +154,7 @@ vec3 fetchSource(vec2 uv) {
   }
 
   vec2 quv = (floor(uv * VHS_RES) + 0.5) / VHS_RES;
-  return texture(inputBuffer, quv).xyz;
+  return texture(uSourceTexture, quv).xyz;
 }
 
 float trackingWarp(float y, float time) {
@@ -294,6 +298,20 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
   outputColor = vec4(col, inputColor.a);
 }
+
+void main() {
+  vec4 inputColor = texture(uSourceTexture, vUv);
+  mainImage(inputColor, vUv, gl_FragColor);
+}
+`;
+
+const VHS_DISPLAY_VERTEX_SHADER = `
+varying vec2 vUv;
+
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
 `;
 
 function createNoiseTexture(size = 256) {
@@ -316,10 +334,14 @@ function createNoiseTexture(size = 256) {
   return texture;
 }
 
-class VhsSignalEffectImpl extends Effect {
-  private rawTime = 0;
-
-  constructor(noiseTexture: THREE.Texture, settings: Pick<
+function VhsDisplayQuad({
+  sourceTexture,
+  noiseTexture,
+  settings,
+}: {
+  sourceTexture: THREE.Texture;
+  noiseTexture: THREE.Texture;
+  settings: Pick<
     VariantPreset,
     | "vhsFps"
     | "vhsTimebaseStrength"
@@ -327,93 +349,63 @@ class VhsSignalEffectImpl extends Effect {
     | "vhsHeadswitchStrength"
     | "vhsDropoutStrength"
     | "vhsNoiseStrength"
-  >) {
-    super("VhsSignalEffect", VHS_EFFECT_SHADER, {
-      blendFunction: BlendFunction.NORMAL,
-      uniforms: new Map<string, THREE.Uniform>([
-        ["uSteppedTime", new THREE.Uniform(0)],
-        ["uContinuousTime", new THREE.Uniform(0)],
-        ["uNoiseTexture", new THREE.Uniform(noiseTexture)],
-        ["uVhsFps", new THREE.Uniform(settings.vhsFps)],
-        ["uVhsTimebaseStrength", new THREE.Uniform(settings.vhsTimebaseStrength)],
-        ["uVhsChromaBleed", new THREE.Uniform(settings.vhsChromaBleed)],
-        ["uVhsHeadswitchStrength", new THREE.Uniform(settings.vhsHeadswitchStrength)],
-        ["uVhsDropoutStrength", new THREE.Uniform(settings.vhsDropoutStrength)],
-        ["uVhsNoiseStrength", new THREE.Uniform(settings.vhsNoiseStrength)],
-      ]),
-    });
-  }
+  >;
+}) {
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const rawTimeRef = useRef(0);
 
-  setSettings(
-    settings: Pick<
-      VariantPreset,
-      | "vhsFps"
-      | "vhsTimebaseStrength"
-      | "vhsChromaBleed"
-      | "vhsHeadswitchStrength"
-      | "vhsDropoutStrength"
-      | "vhsNoiseStrength"
-    >,
-  ) {
-    this.uniforms.get("uVhsFps")!.value = settings.vhsFps;
-    this.uniforms.get("uVhsTimebaseStrength")!.value = settings.vhsTimebaseStrength;
-    this.uniforms.get("uVhsChromaBleed")!.value = settings.vhsChromaBleed;
-    this.uniforms.get("uVhsHeadswitchStrength")!.value = settings.vhsHeadswitchStrength;
-    this.uniforms.get("uVhsDropoutStrength")!.value = settings.vhsDropoutStrength;
-    this.uniforms.get("uVhsNoiseStrength")!.value = settings.vhsNoiseStrength;
-  }
+  const uniforms = useMemo(
+    () => ({
+      uSourceTexture: { value: sourceTexture },
+      uNoiseTexture: { value: noiseTexture },
+      uSteppedTime: { value: 0 },
+      uContinuousTime: { value: 0 },
+      uVhsTimebaseStrength: { value: settings.vhsTimebaseStrength },
+      uVhsChromaBleed: { value: settings.vhsChromaBleed },
+      uVhsHeadswitchStrength: { value: settings.vhsHeadswitchStrength },
+      uVhsDropoutStrength: { value: settings.vhsDropoutStrength },
+      uVhsNoiseStrength: { value: settings.vhsNoiseStrength },
+    }),
+    [noiseTexture, settings, sourceTexture],
+  );
 
-  override update(
-    _renderer: THREE.WebGLRenderer,
-    _inputBuffer: THREE.WebGLRenderTarget,
-    deltaTime: number,
-  ) {
-    this.rawTime += deltaTime;
+  useEffect(() => {
+    const material = materialRef.current;
+    if (!material) return;
+    material.uniforms.uSourceTexture.value = sourceTexture;
+    material.uniforms.uNoiseTexture.value = noiseTexture;
+    material.uniforms.uVhsTimebaseStrength.value = settings.vhsTimebaseStrength;
+    material.uniforms.uVhsChromaBleed.value = settings.vhsChromaBleed;
+    material.uniforms.uVhsHeadswitchStrength.value =
+      settings.vhsHeadswitchStrength;
+    material.uniforms.uVhsDropoutStrength.value = settings.vhsDropoutStrength;
+    material.uniforms.uVhsNoiseStrength.value = settings.vhsNoiseStrength;
+  }, [noiseTexture, settings, sourceTexture]);
 
-    const steppedTimeUniform = this.uniforms.get("uSteppedTime");
-    if (steppedTimeUniform) {
-      steppedTimeUniform.value =
-        Math.floor(this.rawTime * Math.max(1, this.uniforms.get("uVhsFps")?.value ?? VHS_EFFECT_FPS)) /
-        Math.max(1, this.uniforms.get("uVhsFps")?.value ?? VHS_EFFECT_FPS);
-    }
+  useFrame((_, delta) => {
+    rawTimeRef.current += delta;
+    const material = materialRef.current;
+    if (!material) return;
 
-    const continuousTimeUniform = this.uniforms.get("uContinuousTime");
-    if (continuousTimeUniform) {
-      continuousTimeUniform.value = this.rawTime;
-    }
-  }
-}
-
-const VhsSignalEffect = forwardRef<
-  Effect,
-  {
-    noiseTexture: THREE.Texture;
-    settings: Pick<
-      VariantPreset,
-      | "vhsFps"
-      | "vhsTimebaseStrength"
-      | "vhsChromaBleed"
-      | "vhsHeadswitchStrength"
-      | "vhsDropoutStrength"
-      | "vhsNoiseStrength"
-    >;
-  }
->(function VhsSignalEffect({ noiseTexture, settings }, ref) {
-    const effect = useMemo(
-      () => new VhsSignalEffectImpl(noiseTexture, settings),
-      [noiseTexture, settings],
-    );
-
-    useEffect(() => {
-      effect.setSettings(settings);
-    }, [effect, settings]);
-
-    useEffect(() => {
-      return () => effect.dispose();
-    }, [effect]);
-
-    return <primitive ref={ref} object={effect} dispose={null} />;
+    const fps = Math.max(1, settings.vhsFps ?? VHS_EFFECT_FPS);
+    material.uniforms.uSteppedTime.value =
+      Math.floor(rawTimeRef.current * fps) / fps;
+    material.uniforms.uContinuousTime.value = rawTimeRef.current;
   });
+
+  return (
+    <mesh scale={[2, 2, 1]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
+      <shaderMaterial
+        ref={materialRef}
+        uniforms={uniforms}
+        vertexShader={VHS_DISPLAY_VERTEX_SHADER}
+        fragmentShader={VHS_EFFECT_SHADER}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
 
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
@@ -803,37 +795,42 @@ export const TITLE_TEST_2D_VARIANTS: VariantConfig[] = [
       divider: "#ffffff",
       shadowTint: "#110316",
       highlightTint: "#dff6ff",
-      splitBase: 0.455,
-      mountainAmp1: 0.05,
-      mountainAmp2: 0.019,
-      mountainFreq1: 0.96,
-      mountainFreq2: 2.8,
-      mountainPhase1: 0.7,
-      mountainPhase2: 1.4,
-      reflectionMix: 0.54,
-      sheenStrength: 1.18,
-      edgeSoftness: 0.07,
-      pointerInfluence: 1.05,
-      dividerWidth: 0.012,
-      dividerStrength: 0.92,
-      bandCurve: 0.86,
-      dividerEnabled: true,
-      sheenEnabled: true,
+      splitBase: 0.423,
+      mountainAmp1: 0.027,
+      mountainAmp2: 0.045,
+      mountainFreq1: 1.18,
+      mountainFreq2: 4.9,
+      mountainPhase1: 0,
+      mountainPhase2: 2.26,
+      reflectionMix: 0,
+      sheenStrength: 0,
+      edgeSoftness: 0.2,
+      pointerInfluence: 0,
+      dividerWidth: 0.02,
+      dividerStrength: 1,
+      bandCurve: 0.63,
+      dividerEnabled: false,
+      sheenEnabled: false,
       edgeSoftnessEnabled: true,
-      edgeSoftnessOffset: 0,
+      edgeSoftnessOffset: -0.177,
       rearGridEnabled: true,
       rearGridColor: "#ffffff",
-      rearGridDensityX: 19,
-      rearGridDensityY: 12,
-      rearGridWidth: 0.024,
+      rearGridDensityX: 40,
+      rearGridDensityY: 4.5,
+      rearGridWidth: 0.08,
       rearGridAlpha: 0.22,
       rearGridFade: 0.16,
       rearGridParallax: 0.04,
       rearOutlineEnabled: true,
       rearOutlineColor: "#ffffff",
-      rearOutlineOpacity: 0.9,
-      rearOutlineScale: 1.035,
-      ...DEFAULT_VHS_SETTINGS,
+      rearOutlineOpacity: 0.62,
+      rearOutlineScale: 1,
+      vhsFps: 29.97,
+      vhsTimebaseStrength: 0.09,
+      vhsChromaBleed: 0.3,
+      vhsHeadswitchStrength: 0.42,
+      vhsDropoutStrength: 0.23,
+      vhsNoiseStrength: 0.49,
     },
   },
 ];
@@ -1126,7 +1123,7 @@ function FlatTitleVariant({
   );
 }
 
-function SceneContents({
+function WorldSceneContents({
   activeVariant,
   viewIndex,
 }: {
@@ -1191,6 +1188,7 @@ function SceneContents({
   return (
     <>
       <CameraRig viewIndex={viewIndex} />
+      <color attach="background" args={["#030611"]} />
       <UniverseSkyDome />
       <UniverseBackgroundSphere />
       <RotatingStars />
@@ -1203,9 +1201,63 @@ function SceneContents({
         referenceDistance={referenceDistance}
         referenceFov={50}
       />
-      <EffectComposer enableNormalPass={false}>
-        <VhsSignalEffect noiseTexture={noiseTexture} settings={activeVariant.preset} />
-      </EffectComposer>
+    </>
+  );
+}
+
+function SceneContents({
+  activeVariant,
+  viewIndex,
+}: {
+  activeVariant: VariantConfig;
+  viewIndex: number;
+}) {
+  const { gl, camera } = useThree();
+  const noiseTexture = useMemo(() => createNoiseTexture(), []);
+  const offscreenScene = useMemo(() => new THREE.Scene(), []);
+  const screenScene = useMemo(() => new THREE.Scene(), []);
+  const screenCamera = useMemo(() => {
+    const nextCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+    nextCamera.position.set(0, 0, 1);
+    return nextCamera;
+  }, []);
+  const offscreenTarget = useFBO(333, 480, {
+    depthBuffer: true,
+    stencilBuffer: false,
+    samples: 0,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+  });
+
+  useFrame(() => {
+    gl.setRenderTarget(offscreenTarget);
+    gl.clear(true, true, true);
+    gl.render(offscreenScene, camera);
+    gl.setRenderTarget(null);
+    gl.clear(true, true, true);
+    gl.render(screenScene, screenCamera);
+  }, 1);
+
+  useEffect(() => {
+    return () => {
+      noiseTexture.dispose();
+      offscreenTarget.dispose();
+    };
+  }, [noiseTexture, offscreenTarget]);
+
+  return (
+    <>
+      {createPortal(
+        <WorldSceneContents activeVariant={activeVariant} viewIndex={viewIndex} />,
+        offscreenScene,
+      )}
+      {createPortal(
+        <VhsDisplayQuad
+          sourceTexture={offscreenTarget.texture}
+          noiseTexture={noiseTexture}
+          settings={activeVariant.preset}
+        />
+      , screenScene)}
     </>
   );
 }

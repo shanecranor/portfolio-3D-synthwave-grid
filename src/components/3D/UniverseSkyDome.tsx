@@ -57,18 +57,32 @@ void main() {
 }
 `;
 
-export function UniverseSkyDome() {
+type UniverseSkyDomeProps = {
+  topColor?: THREE.ColorRepresentation;
+  bottomColor?: THREE.ColorRepresentation;
+  horizonColor?: THREE.ColorRepresentation;
+  horizonGlowColor?: THREE.ColorRepresentation;
+  glowStrength?: number;
+};
+
+export function UniverseSkyDome({
+  topColor = "#16244d",
+  bottomColor = "#59256b",
+  horizonColor = "#59256b",
+  horizonGlowColor = "#d884ff",
+  glowStrength = 1.2,
+}: UniverseSkyDomeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
   const uniforms = useMemo(
     () => ({
-      topColor: { value: new THREE.Color("#16244d") },
-      bottomColor: { value: new THREE.Color("#59256b") },
-      horizonColor: { value: new THREE.Color("#59256b") },
-      horizonGlowColor: { value: new THREE.Color("#d884ff") },
-      glowStrength: { value: 1.2 },
+      topColor: { value: new THREE.Color(topColor) },
+      bottomColor: { value: new THREE.Color(bottomColor) },
+      horizonColor: { value: new THREE.Color(horizonColor) },
+      horizonGlowColor: { value: new THREE.Color(horizonGlowColor) },
+      glowStrength: { value: glowStrength },
     }),
-    [],
+    [bottomColor, glowStrength, horizonColor, horizonGlowColor, topColor],
   );
 
   useFrame(() => {
@@ -81,6 +95,7 @@ export function UniverseSkyDome() {
     <mesh ref={meshRef} renderOrder={-1000}>
       <sphereGeometry args={[180, 48, 48]} />
       <shaderMaterial
+        key={`${topColor}:${bottomColor}:${horizonColor}:${horizonGlowColor}:${glowStrength}`}
         uniforms={uniforms}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}

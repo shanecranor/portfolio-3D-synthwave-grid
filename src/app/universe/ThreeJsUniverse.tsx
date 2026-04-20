@@ -40,6 +40,11 @@ import {
   type HudFontOption,
   UniverseHudOverlay,
 } from "@/app/universe/UniverseHudOverlay";
+import { UniverseAppearanceEditor } from "@/app/universe/UniverseAppearanceEditor";
+import {
+  DEFAULT_UNIVERSE_APPEARANCE,
+  type UniverseAppearanceSettings,
+} from "@/app/universe/universeAppearance";
 import {
   UNIVERSE_SECTIONS,
   type UniverseSectionId,
@@ -47,6 +52,29 @@ import {
 import { useRouter } from "next/navigation";
 
 const NAVIGATION_SURGE_MS = 420;
+const EXPORT_STATUS_TIMEOUT_MS = 2200;
+
+function isEditableTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLButtonElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function UniverseSceneFog({
+  color,
+  near,
+  far,
+}: {
+  color: UniverseAppearanceSettings["fogColor"];
+  near: UniverseAppearanceSettings["fogNear"];
+  far: UniverseAppearanceSettings["fogFar"];
+}) {
+  return <fog attach="fog" args={[color, near, far]} />;
+}
 
 function RotatingStars() {
   const starfieldRef = useRef<THREE.Group>(null);
@@ -78,37 +106,57 @@ function RotatingStars() {
 }
 
 // const EDGE_COLOR = [245, 61, 171]; //[247, 100, 188];
-const EDGE_COLOR = [209, 109, 169];
-const SPHERE_GLOW_COLOR = [69, 49, 99];
-
 const UniverseBackdrop = memo(function UniverseBackdrop({
-  edgeColor,
   noiseAmount,
   poleNoiseFloor,
   equatorPower,
   yNoiseScale,
   displaceYScale,
   cylinderMorph,
-  glowColor,
+  appearance,
+  glowVisible,
 }: {
-  edgeColor: THREE.Color;
   noiseAmount: number;
   poleNoiseFloor: number;
   equatorPower: number;
   yNoiseScale: number;
   displaceYScale: number;
   cylinderMorph: number;
-  glowColor?: THREE.Color;
+  appearance: UniverseAppearanceSettings;
+  glowVisible: boolean;
 }) {
+  const edgeColor = useMemo(
+    () => new THREE.Color(appearance.wireframeColor),
+    [appearance.wireframeColor],
+  );
+  const sphereFillColor = useMemo(
+    () => new THREE.Color(appearance.sphereBaseColor),
+    [appearance.sphereBaseColor],
+  );
+  const glowColor = useMemo(() => {
+    if (!glowVisible) {
+      return undefined;
+    }
+
+    return new THREE.Color(appearance.sphereGlowColor);
+  }, [appearance.sphereGlowColor, glowVisible]);
+
   return (
     <>
-      <UniverseSkyDome />
+      <UniverseSkyDome
+        topColor={appearance.skyTopColor}
+        bottomColor={appearance.skyBottomColor}
+        horizonColor={appearance.horizonColor}
+        horizonGlowColor={appearance.horizonGlowColor}
+        glowStrength={appearance.horizonGlowStrength}
+      />
       <Detailed distances={[3, 25]}>
         <NoisySphere
           radius={10}
           widthSegments={350}
           heightSegments={70}
           noiseAmount={noiseAmount}
+          fillColor={sphereFillColor}
           edgeColor={edgeColor}
           flatCenter={true}
           poleNoiseFloor={poleNoiseFloor}
@@ -122,6 +170,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
           widthSegments={32}
           heightSegments={32}
           noiseAmount={noiseAmount}
+          fillColor={sphereFillColor}
           edgeColor={edgeColor}
           flatCenter={true}
           poleNoiseFloor={poleNoiseFloor}
@@ -131,7 +180,11 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
           cylinderMorph={cylinderMorph}
         />
       </Detailed>
-      <GlowSphere radius={10} glowColor={glowColor} />
+      <GlowSphere
+        radius={10}
+        glowColor={glowColor}
+        glowOpacity={appearance.sphereGlowOpacity}
+      />
       <RotatingStars />
 
       <EffectComposer>
@@ -157,17 +210,14 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
 
 export const ThreeJsUniverse = () => {
   const router = useRouter();
-  const edgeBrightness = 1.0;
-  const edgeColor = useMemo(
-    () => new THREE.Color(...EDGE_COLOR.map((c) => (c / 255) * edgeBrightness)),
-    [],
-  );
-  const sphereGlowColor = useMemo(
-    () => new THREE.Color(...SPHERE_GLOW_COLOR.map((c) => c / 255)),
-    [],
-  );
   const [activeViewIndex, setActiveViewIndex] = useState(0);
   const [activeComputerIndex, setActiveComputerIndex] = useState(0);
+  const [appearance, setAppearance] = useState<UniverseAppearanceSettings>(
+    DEFAULT_UNIVERSE_APPEARANCE,
+  );
+  const [isAppearanceEditorVisible, setIsAppearanceEditorVisible] =
+    useState(false);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const hudFontOption: HudFontOption = HUD_FONT_OPTIONS[0];
   const [hoverState, setHoverState] = useState<{
     sectionId: UniverseSectionId;
@@ -180,6 +230,7 @@ export const ThreeJsUniverse = () => {
   const [isGlowVisible, setIsGlowVisible] = useState(true);
   const hudExitTimeoutRef = useRef<number | undefined>(undefined);
   const navigationTimeoutRef = useRef<number | undefined>(undefined);
+  const exportStatusTimeoutRef = useRef<number | undefined>(undefined);
   const [surgingSectionId, setSurgingSectionId] =
     useState<UniverseSectionId | null>(null);
   const noiseAmount = 0.3;
@@ -191,6 +242,15 @@ export const ThreeJsUniverse = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isEditableTarget(event.target)
+      ) {
+        return;
+      }
+
       if (event.code === "Space") {
         event.preventDefault();
         setActiveViewIndex((current) => (current + 1) % VIEWS.length);
@@ -204,6 +264,10 @@ export const ThreeJsUniverse = () => {
       if (event.code === "KeyG") {
         event.preventDefault();
         setIsGlowVisible((current) => !current);
+      }
+      if (event.code === "KeyE") {
+        event.preventDefault();
+        setIsAppearanceEditorVisible((current) => !current);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -219,6 +283,9 @@ export const ThreeJsUniverse = () => {
       }
       if (navigationTimeoutRef.current) {
         window.clearTimeout(navigationTimeoutRef.current);
+      }
+      if (exportStatusTimeoutRef.current) {
+        window.clearTimeout(exportStatusTimeoutRef.current);
       }
     };
   }, []);
@@ -239,6 +306,92 @@ export const ThreeJsUniverse = () => {
       }) as CSSProperties,
     [hoveredSection],
   );
+
+  const setFlashStatus = useCallback((message: string) => {
+    if (exportStatusTimeoutRef.current) {
+      window.clearTimeout(exportStatusTimeoutRef.current);
+    }
+
+    setExportStatus(message);
+    exportStatusTimeoutRef.current = window.setTimeout(() => {
+      setExportStatus(null);
+      exportStatusTimeoutRef.current = undefined;
+    }, EXPORT_STATUS_TIMEOUT_MS);
+  }, []);
+
+  const handleAppearanceColorChange = useCallback(
+    (
+      key:
+        | "backgroundColor"
+        | "skyTopColor"
+        | "skyBottomColor"
+        | "horizonColor"
+        | "horizonGlowColor"
+        | "fogColor"
+        | "sphereBaseColor"
+        | "wireframeColor"
+        | "sphereGlowColor",
+      value: string,
+    ) => {
+      setAppearance((current) => ({
+        ...current,
+        [key]: value,
+      }));
+    },
+    [],
+  );
+
+  const handleAppearanceNumberChange = useCallback(
+    (
+      key:
+        | "horizonGlowStrength"
+        | "sphereGlowOpacity"
+        | "fogNear"
+        | "fogFar",
+      value: number,
+    ) => {
+      setAppearance((current) => {
+        if (key === "fogNear") {
+          return {
+            ...current,
+            fogNear: Math.min(value, current.fogFar - 1),
+          };
+        }
+
+        if (key === "fogFar") {
+          return {
+            ...current,
+            fogFar: Math.max(value, current.fogNear + 1),
+          };
+        }
+
+        return {
+          ...current,
+          [key]: value,
+        };
+      });
+    },
+    [],
+  );
+
+  const handleAppearanceReset = useCallback(() => {
+    setAppearance(DEFAULT_UNIVERSE_APPEARANCE);
+    setFlashStatus("Universe appearance reset");
+  }, [setFlashStatus]);
+
+  const handleAppearanceExport = useCallback(() => {
+    const payload = JSON.stringify(appearance, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "universe-appearance.json";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(downloadUrl);
+    setFlashStatus("Downloaded universe-appearance.json");
+  }, [appearance, setFlashStatus]);
 
   const handleSectionHoverStateChange = useCallback(
     (
@@ -330,7 +483,12 @@ export const ThreeJsUniverse = () => {
         dpr={[1 / 2, 1]}
         gl={{ alpha: false }}
       >
-        <color attach="background" args={["#02040a"]} />
+        <color attach="background" args={[appearance.backgroundColor]} />
+        <UniverseSceneFog
+          color={appearance.fogColor}
+          near={appearance.fogNear}
+          far={appearance.fogFar}
+        />
         <CameraRig
           viewIndex={activeViewIndex}
           manualControlEnabled={isTrackballView}
@@ -368,14 +526,14 @@ export const ThreeJsUniverse = () => {
           surgingSectionId={surgingSectionId}
         />
         <UniverseBackdrop
-          edgeColor={edgeColor}
           noiseAmount={noiseAmount}
           poleNoiseFloor={poleNoiseFloor}
           equatorPower={equatorPower}
           yNoiseScale={yNoiseScale}
           displaceYScale={displaceYScale}
           cylinderMorph={cylinderMorph}
-          glowColor={isGlowVisible ? sphereGlowColor : undefined}
+          appearance={appearance}
+          glowVisible={isGlowVisible}
         />
         <UniverseHudOverlay
           active={Boolean(activeSectionId)}
@@ -391,6 +549,19 @@ export const ThreeJsUniverse = () => {
       />
 
       <Loader />
+
+      <UniverseAppearanceEditor
+        settings={appearance}
+        visible={isAppearanceEditorVisible}
+        exportStatus={exportStatus}
+        onToggleVisibility={() =>
+          setIsAppearanceEditorVisible((current) => !current)
+        }
+        onReset={handleAppearanceReset}
+        onExport={handleAppearanceExport}
+        onColorChange={handleAppearanceColorChange}
+        onNumberChange={handleAppearanceNumberChange}
+      />
     </div>
   );
 };

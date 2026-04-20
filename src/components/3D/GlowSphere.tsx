@@ -2,6 +2,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
+type ThreeColorValue = THREE.ColorRepresentation | [number, number, number];
+
 const HALO_VERTEX_SHADER = `
 varying vec3 vWorldPosition;
 varying vec3 vWorldNormal;
@@ -57,7 +59,7 @@ type GlowSphereProps = {
   widthSegments?: number;
   heightSegments?: number;
   rotation?: [number, number, number];
-  glowColor?: THREE.Color;
+  glowColor?: ThreeColorValue;
   glowSpread?: number;
   glowOpacity?: number;
   glowPower?: number;
@@ -89,8 +91,38 @@ export function GlowSphere({
   const glowScale = 1 + Math.max(0.02, glowSpread);
   const glowRadius = radius * glowScale;
   const glowBoundarySoftness = Math.max(0.05, glowRadius * 0.015);
+  const resolvedGlowColor = useMemo(() => {
+    if (!glowColor) {
+      return null;
+    }
 
-  if (!glowColor) {
+    if (Array.isArray(glowColor)) {
+      return new THREE.Color(glowColor[0], glowColor[1], glowColor[2]);
+    }
+
+    return new THREE.Color(glowColor);
+  }, [glowColor]);
+
+  const glowUniforms = useMemo(
+    () => ({
+      uColor: { value: resolvedGlowColor ?? new THREE.Color("#ffffff") },
+      uOpacity: { value: glowOpacity },
+      uPower: { value: glowPower },
+      uEdgePower: { value: glowEdgePower },
+      uRadius: { value: glowRadius },
+      uBoundarySoftness: { value: glowBoundarySoftness },
+    }),
+    [
+      glowBoundarySoftness,
+      glowEdgePower,
+      glowOpacity,
+      glowPower,
+      glowRadius,
+      resolvedGlowColor,
+    ],
+  );
+
+  if (!resolvedGlowColor) {
     return null;
   }
 
@@ -98,6 +130,7 @@ export function GlowSphere({
     <group ref={groupRef} rotation={rotation}>
       <mesh geometry={glowGeometry} scale={[glowScale, glowScale, glowScale]}>
         <shaderMaterial
+          key={`${resolvedGlowColor.getHexString()}:${glowOpacity}:${glowPower}:${glowEdgePower}:${glowRadius}:${glowBoundarySoftness}`}
           transparent
           blending={THREE.AdditiveBlending}
           side={THREE.DoubleSide}
@@ -105,14 +138,7 @@ export function GlowSphere({
           toneMapped={false}
           vertexShader={HALO_VERTEX_SHADER}
           fragmentShader={HALO_FRAGMENT_SHADER}
-          uniforms={{
-            uColor: { value: glowColor },
-            uOpacity: { value: glowOpacity },
-            uPower: { value: glowPower },
-            uEdgePower: { value: glowEdgePower },
-            uRadius: { value: glowRadius },
-            uBoundarySoftness: { value: glowBoundarySoftness },
-          }}
+          uniforms={glowUniforms}
         />
       </mesh>
     </group>
