@@ -15,39 +15,39 @@ export type UniverseSectionData = {
 
 export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
   {
+    projects: {
+      id: "projects",
+      label: "Projects",
+      description:
+      "Currently a full stack software engineer, I work on a variety of personal projects both inside and outside that realm.",
+      tags: ["Web", "Open Source", "Electronics", "3D Printing", "Games"],
+      status: "Building Stuff",
+      actionLabel: "Check it out!",
+      href: "/code",
+      accent: "#73d1ad",
+      accentRgb: "115, 209, 173",
+    },
     photography: {
       id: "photography",
       label: "Photography",
       description:
-        "Framing quiet moments, neon nights, and texture-rich scenes with a cinematic eye.",
-      tags: ["Mirrorless", "RAW Workflow", "Street", "Low Light"],
-      status: "Archive steady",
-      actionLabel: "Open archive",
+        "Taking pictures of whatever catches my eye. Designing 3D printed adapters for niche vintage lenses.",
+      tags: ["Nikon Z6", "Darktable", "Super-Multi-Coated TAKUMAR 50mm f/1.4"],
+      status: "bogos binted",
+      actionLabel: "Photos",
       href: "https://shane.cranor.org/photos",
       accent: "#ff86f7",
       accentRgb: "255, 134, 247",
       external: true,
     },
-    projects: {
-      id: "projects",
-      label: "Projects",
-      description:
-        "Interactive builds, experimental interfaces, and full-stack systems tuned for clarity.",
-      tags: ["React", "TypeScript", "R3F", "Full Stack"],
-      status: "Signal tuned",
-      actionLabel: "Open channel",
-      href: "/code",
-      accent: "#73d1ad",
-      accentRgb: "115, 209, 173",
-    },
     music: {
       id: "music",
       label: "Music",
       description:
-        "Bass-driven songwriting, synth textures, and production work shaped by analog energy.",
-      tags: ["Bass", "Synth", "Production", "Mixing"],
-      status: "Playback rolling",
-      actionLabel: "Open playback",
+        "In my free time, I play bass, guitar, drums, keyboard, and make electronic music. Listen to the rock album I wrote, recorded, & mixed with my friends: Hotbed of Descent by The Electric Army..",
+      tags: [],
+      status: "head banging",
+      actionLabel: "Rock out",
       href: "/music",
       accent: "#73b4ff",
       accentRgb: "115, 180, 255",
