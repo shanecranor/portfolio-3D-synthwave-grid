@@ -19,7 +19,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       id: "projects",
       label: "Projects",
       description:
-      "Currently a full stack software engineer, I work on a variety of personal projects both inside and outside that realm.",
+      "I work as a fullstack software engineer and spend much of my free time working on cool cross discipline projects.",
       tags: ["Web", "Open Source", "Electronics", "3D Printing", "Games"],
       status: "Building Stuff",
       actionLabel: "Check it out!",
@@ -44,7 +44,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       id: "music",
       label: "Music",
       description:
-        "In my free time, I play bass, guitar, drums, keyboard, and make electronic music. Listen to the rock album I wrote, recorded, & mixed with my friends: Hotbed of Descent by The Electric Army..",
+        "In my free time, I play bass, guitar, drums, keyboard, and make electronic music. Listen to the rock album I wrote, recorded, & mixed with my friends: Hotbed of Descent by The Electric Army.",
       tags: [],
       status: "head banging",
       actionLabel: "Rock out",
