@@ -105,7 +105,7 @@ export default function UniversePage() {
           <h1 className="sr-only">Shane Cranor</h1>
           <div className="universe-intro-copy">
             {/* <p>Developer · Musician · Photographer</p> */}
-            <a className="universe-explore" href="#photography">
+            <a className="universe-explore" href="#projects">
               Explore
               <span aria-hidden="true">↓</span>
             </a>
