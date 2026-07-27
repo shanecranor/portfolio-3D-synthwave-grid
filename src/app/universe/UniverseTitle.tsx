@@ -1,9 +1,18 @@
 "use client";
 
 import * as THREE from "three";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { TextGeometry } from "three/examples/jsm/Addons.js";
+import {
+  TextGeometry,
+  type TextGeometryParameters,
+} from "three/examples/jsm/Addons.js";
 import type { Line2, LineMaterial } from "three-stdlib";
 import {
   MeshTransmissionMaterial,
@@ -18,11 +27,12 @@ import {
   getUniverseTitleAnchorX,
   getUniverseTitleScale,
 } from "@/components/3D/universeLayout";
+import { stepDampedSpring } from "@/components/3D/stepDampedSpring";
 
 const UNIVERSE_TITLE_COLOR = "#ffffff";
-const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = [88, 94, 195].map((c) => c / 100);
-const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = [0.1, 0.1, 0.1] as const;
-const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = [88, 94, 195].map((c) => c / 100);
+const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = new THREE.Color(0.88, 0.94, 1.95);
+const UNIVERSE_TITLE_OUTLINE_SHADOW_COLOR = new THREE.Color(0.1, 0.1, 0.1);
+const UNIVERSE_TITLE_OUTLINE_BACK_COLOR = new THREE.Color(0.88, 0.94, 1.95);
 const TITLE_HITBOX_PADDING_X = 0.8;
 const TITLE_HITBOX_PADDING_Y = 0.8;
 const TITLE_HITBOX_PADDING_Z = 0.8;
@@ -32,6 +42,15 @@ const TITLE_POINTER_SPEED_MIN = 120;
 const TITLE_POINTER_SPEED_MAX = 1600;
 const TITLE_POINTER_STRENGTH_DECAY_SPEED = 2.5;
 
+type AnimatedDashLineProps = {
+  shape: THREE.Shape | THREE.Path;
+  color: THREE.ColorRepresentation;
+  thickness: number;
+  speed?: number;
+  dashSize?: number;
+  gapSize?: number;
+};
+
 const AnimatedDashLine = ({
   shape,
   color,
@@ -39,12 +58,14 @@ const AnimatedDashLine = ({
   speed = 1,
   dashSize = 0.25,
   gapSize = 0.1,
-}) => {
+}: AnimatedDashLineProps) => {
   const lineRef = useRef<Line2 | null>(null);
   const isDashed = gapSize > 0 && dashSize > 0;
   const { linePoints, totalLineLength } = useMemo(() => {
     // add z coord to 2D points to make them 3D
-    const _points = shape.getPoints().map((p) => [p.x, p.y, 0]);
+    const _points: [number, number, number][] = shape
+      .getPoints()
+      .map((point) => [point.x, point.y, 0]);
     // calculate approximate total line length
     let _length = 0;
     for (let i = 0; i < _points.length - 1; i++) {
@@ -56,7 +77,7 @@ const AnimatedDashLine = ({
     return { linePoints: _points, totalLineLength: _length };
   }, [shape]);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!isDashed) return;
 
     const material = lineRef.current?.material as LineMaterial | undefined;
@@ -92,12 +113,12 @@ const AnimatedDashLine = ({
 };
 
 type UniverseTitleProps = {
-  viewIndex: number;
+  visible: boolean;
   textScale?: number;
 };
 
 export const UniverseTitle = ({
-  viewIndex,
+  visible,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
 }: UniverseTitleProps) => {
   const browserWidth = useThree((state) => state.size.width);
@@ -107,9 +128,12 @@ export const UniverseTitle = ({
   const mouseVel = useRef(new THREE.Vector2(0, 0));
   const targetMouse = useRef(new THREE.Vector2(0, 0));
   const transmissionFadeRef = useRef(0);
-  const transmissionMaterialRef = useRef<THREE.Material | null>(null);
+  const transmissionMaterialRef =
+    useRef<ComponentRef<typeof MeshTransmissionMaterial>>(null);
   const showTransmissionMaterialRef = useRef(false);
   const pointerMotionStrengthRef = useRef(0);
+  const revealRef = useRef(visible ? 1 : 0);
+  const revealVelocityRef = useRef(0);
   const lastPointerSampleRef = useRef<{
     x: number;
     y: number;
@@ -122,9 +146,9 @@ export const UniverseTitle = ({
   const font = useFont("/AAReg.json");
 
   const text = "Shane Cranor";
-  const config = useMemo(
+  const config = useMemo<TextGeometryParameters>(
     () => ({
-      font,
+      font: font as unknown as TextGeometryParameters["font"],
       size: 2,
       depth: 0.1,
       curveSegments: 32,
@@ -161,7 +185,6 @@ export const UniverseTitle = ({
     };
   }, [config, text]);
 
-  const isDefaultView = viewIndex === 0 || true;
   const responsiveTextScale = useMemo(() => {
     return getUniverseTitleScale(browserWidth, textScale);
   }, [browserWidth, textScale]);
@@ -173,8 +196,17 @@ export const UniverseTitle = ({
     const root = rootRef.current;
     if (!root) return;
 
-    root.visible = isDefaultView;
-    if (!isDefaultView) return;
+    const revealSpring = stepDampedSpring(
+      revealRef.current,
+      revealVelocityRef.current,
+      visible ? 1 : 0,
+      delta,
+      6,
+      1,
+    );
+    revealRef.current = THREE.MathUtils.clamp(revealSpring.value, 0, 1);
+    revealVelocityRef.current = revealSpring.velocity;
+    root.visible = visible || revealRef.current > 0.002;
 
     //mouse easing
     targetMouse.current.set(pointer.x, pointer.y);
@@ -207,10 +239,12 @@ export const UniverseTitle = ({
 
     root.position.set(
       titleAnchorX,
-      DEFAULT_UNIVERSE_ANCHOR_Y,
+      DEFAULT_UNIVERSE_ANCHOR_Y - (1 - revealRef.current) * 0.35,
       DEFAULT_UNIVERSE_ANCHOR_Z,
     );
-    centerRef.current?.scale.setScalar(responsiveTextScale);
+    centerRef.current?.scale.setScalar(
+      responsiveTextScale * revealRef.current,
+    );
 
     const t = clock.getElapsedTime();
     root.rotation.set(
@@ -236,9 +270,7 @@ export const UniverseTitle = ({
     );
     transmissionFadeRef.current = nextFade;
 
-    const transmissionMaterial = transmissionMaterialRef.current as
-      | (THREE.Material & { opacity?: number; transmission?: number })
-      | null;
+    const transmissionMaterial = transmissionMaterialRef.current;
 
     if (transmissionMaterial) {
       transmissionMaterial.opacity = nextFade;
@@ -342,7 +374,13 @@ export const UniverseTitle = ({
 
         {/* animated outlines */}
         {/* MAIN THICK LINES */}
-        <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
+        <group
+          position={[
+            0,
+            0,
+            (config.depth ?? 0.1) + (config.bevelThickness ?? 0.05) + 0.01,
+          ]}
+        >
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
               <AnimatedDashLine
@@ -366,7 +404,13 @@ export const UniverseTitle = ({
           ))}
         </group>
         {/* SECONDARY ALWAYS ON LINES */}
-        <group position={[0, 0, config.depth + config.bevelThickness + 0.01]}>
+        <group
+          position={[
+            0,
+            0,
+            (config.depth ?? 0.1) + (config.bevelThickness ?? 0.05) + 0.01,
+          ]}
+        >
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
               <AnimatedDashLine
@@ -388,7 +432,9 @@ export const UniverseTitle = ({
           ))}
         </group>
         {/* REAR LINES */}
-        <group position={[0, 0, -1 * (config.bevelThickness + 0.01)]}>
+        <group
+          position={[0, 0, -1 * ((config.bevelThickness ?? 0.05) + 0.01)]}
+        >
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
               <AnimatedDashLine
