@@ -162,9 +162,13 @@ export function ThreeJsUniverse({ activeSectionId }: ThreeJsUniverseProps) {
   const navigationTimeoutRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    setHoverState((current) =>
-      current?.sectionId === activeSectionId ? current : null,
-    );
+    const frameId = window.requestAnimationFrame(() => {
+      setHoverState((current) =>
+        current?.sectionId === activeSectionId ? current : null,
+      );
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [activeSectionId]);
 
   useEffect(() => {
