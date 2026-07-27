@@ -125,9 +125,10 @@ const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const PORTRAIT_STACK_ASPECT = 0.95;
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
-  xOffset: -2.2,
-  yOffset: 0.42,
-  zOffset: -1.45,
+    xOffset: 2.15,
+  yOffset: 0.35,
+  zOffset: -1.4,
+
   rotationX: 0.8,
   rotationY: -1.5,
   rotationZ: 0,
@@ -136,9 +137,9 @@ const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
-  xOffset: 2.15,
-  yOffset: 0.35,
-  zOffset: -1.4,
+    xOffset: -2.2,
+  yOffset: 0.42,
+  zOffset: -1.45,
   rotationX: 0.5,
   rotationY: -Math.PI / 2,
   rotationZ: 0,
