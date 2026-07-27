@@ -17,6 +17,7 @@ import type { UniverseSectionId } from "@/data/universeSections";
 type UniverseComputerProps = {
   viewIndex: number;
   modelIndex: number;
+  visible?: boolean;
   targetSize?: number;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
@@ -30,6 +31,7 @@ type UniverseComputerProps = {
 
 type UniverseBassProps = {
   viewIndex: number;
+  visible?: boolean;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
       isHovered: boolean,
@@ -42,6 +44,7 @@ type UniverseBassProps = {
 
 type UniverseReflexCameraProps = {
   viewIndex: number;
+  visible?: boolean;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
       isHovered: boolean,
@@ -67,6 +70,7 @@ type AnchoredPlacementConfig = {
 type UniverseAnchoredObjectProps = {
   sectionId: UniverseSectionId;
   viewIndex: number;
+  visible: boolean;
   placement: AnchoredPlacementConfig;
   hoverScale?: number;
   hitbox?: HitboxConfig;
@@ -101,9 +105,8 @@ type HitboxConfig = {
 };
 
 const COMPUTER_MODELS = ["/assets/computer/old_computer/scene.gltf"] as const;
-const BASS_MODEL_PATH = "/assets/bass/low_polygons_shihos_bass/scene.gltf";
-// const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/ae1/scene.gltf";
-const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/sa3/scene.gltf";
+const BASS_MODEL_PATH = "/assets/universe/bass/scene.gltf";
+const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/reflex_camera/scene.gltf";
 
 export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
 
@@ -119,13 +122,12 @@ const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ba9379");
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
-const MIN_HORIZONTAL_SPREAD = 0.35;
-const MAX_HORIZONTAL_SPREAD = 1;
+const PORTRAIT_STACK_ASPECT = 0.95;
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
-  xOffset: -2.75,
-  yOffset: 1.15,
-  zOffset: -1.3,
+  xOffset: -2.2,
+  yOffset: 0.42,
+  zOffset: -1.45,
   rotationX: 0.8,
   rotationY: -1.5,
   rotationZ: 0,
@@ -134,9 +136,9 @@ const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
-  xOffset: 0,
-  yOffset: 1.15,
-  zOffset: -1.15,
+  xOffset: 2.15,
+  yOffset: 0.35,
+  zOffset: -1.4,
   rotationX: 0.5,
   rotationY: -Math.PI / 2,
   rotationZ: 0,
@@ -144,9 +146,9 @@ const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
 };
 
 const BASS_PLACEMENT: AnchoredPlacementConfig = {
-  xOffset: 2.8,
-  yOffset: 1.15,
-  zOffset: -1.35,
+  xOffset: -2.15,
+  yOffset: 0.3,
+  zOffset: -1.55,
   rotationX: Math.PI / 2,
   rotationY: Math.PI - 0.2,
   rotationZ: 0,
@@ -169,13 +171,14 @@ const BASS_HITBOX: HitboxConfig = {
 
 function getHorizontalSpreadScale(width: number, height: number) {
   if (height <= 0) {
-    return MAX_HORIZONTAL_SPREAD;
+    return 1;
   }
 
   return THREE.MathUtils.clamp(
-    width / height / DEFAULT_LAYOUT_ASPECT,
-    MIN_HORIZONTAL_SPREAD,
-    MAX_HORIZONTAL_SPREAD,
+    (width / height - PORTRAIT_STACK_ASPECT) /
+      (DEFAULT_LAYOUT_ASPECT - PORTRAIT_STACK_ASPECT),
+    0,
+    1,
   );
 }
 
@@ -313,6 +316,7 @@ function WireframeModel({
 function UniverseAnchoredObject({
   sectionId,
   viewIndex,
+  visible,
   placement,
   hoverScale = 1.12,
   hitbox,
@@ -329,15 +333,17 @@ function UniverseAnchoredObject({
   const hoverVelocityRef = useRef(0);
   const surgeScaleRef = useRef(isSurging ? 1 : 0);
   const surgeVelocityRef = useRef(0);
+  const revealRef = useRef(visible ? 1 : 0);
+  const revealVelocityRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  const isDefaultView = viewIndex === 0 || true;
-  const isActivelyHovered = isDefaultView && isHovered;
+  const isDefaultView = viewIndex === 0;
+  const isActivelyHovered = isDefaultView && visible && isHovered;
   const isHighlighted = isActivelyHovered || isForcedActive;
 
   const responsiveScale = useMemo(() => {
-    const minScale = 0.12;
-    const maxScale = 0.5;
+    const minScale = 0.3;
+    const maxScale = 0.76;
     const t = getUniverseResponsiveWidthFactor(canvasSize.width);
 
     return THREE.MathUtils.lerp(minScale, maxScale, t);
@@ -380,13 +386,24 @@ function UniverseAnchoredObject({
     const model = modelRef.current;
     if (!anchor || !model) return;
 
-    anchor.visible = isDefaultView;
+    anchor.visible = isDefaultView && (visible || revealRef.current > 0.002);
     if (!isDefaultView) return;
+
+    const revealSpring = stepDampedSpring(
+      revealRef.current,
+      revealVelocityRef.current,
+      visible ? 1 : 0,
+      delta,
+      6,
+      1,
+    );
+    revealRef.current = THREE.MathUtils.clamp(revealSpring.value, 0, 1);
+    revealVelocityRef.current = revealSpring.velocity;
 
     const elapsed = clock.getElapsedTime();
     anchor.position.set(
       titleAnchorX + placement.xOffset * horizontalSpreadScale,
-      DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset,
+      DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset - (1 - revealRef.current) * 0.5,
       DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
     );
     model.rotation.set(
@@ -420,13 +437,16 @@ function UniverseAnchoredObject({
     surgeScaleRef.current = surgeSpring.value;
     surgeVelocityRef.current = surgeSpring.velocity;
     anchor.scale.setScalar(
-      responsiveScale * hoverScaleRef.current * (1 + surgeScaleRef.current * 0.18),
+      responsiveScale *
+        hoverScaleRef.current *
+        revealRef.current *
+        (1 + surgeScaleRef.current * 0.18),
     );
   });
 
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
-    if (isDefaultView) {
+    if (isDefaultView && visible) {
       setIsHovered(true);
     }
   };
@@ -470,6 +490,7 @@ function UniverseAnchoredObject({
 
 export function UniverseReflexCamera({
   viewIndex,
+  visible = true,
   onHoverStateChange,
   onSelect,
   activeSectionId,
@@ -479,6 +500,7 @@ export function UniverseReflexCamera({
     <UniverseAnchoredObject
       sectionId="photography"
       viewIndex={viewIndex}
+      visible={visible}
       placement={REFLEX_CAMERA_PLACEMENT}
       hitbox={REFLEX_CAMERA_HITBOX}
       onHoverStateChange={onHoverStateChange}
@@ -489,10 +511,10 @@ export function UniverseReflexCamera({
       {({ isHighlighted, isSurging: isItemSurging }) => (
         <WireframeModel
           path={REFLEX_CAMERA_MODEL_PATH}
-          targetSize={2.5}
+          targetSize={3.7}
           fillColor={CAMERA_FILL_COLOR}
           wireframeColor={CAMERA_WIREFRAME_COLOR}
-          wireframeOpacity={0.08}
+          wireframeOpacity={0.14}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
@@ -504,7 +526,8 @@ export function UniverseReflexCamera({
 export function UniverseComputer({
   viewIndex,
   modelIndex,
-  targetSize = 3.6,
+  visible = true,
+  targetSize = 4.5,
   onHoverStateChange,
   onSelect,
   activeSectionId,
@@ -516,6 +539,7 @@ export function UniverseComputer({
     <UniverseAnchoredObject
       sectionId="projects"
       viewIndex={viewIndex}
+      visible={visible}
       placement={COMPUTER_PLACEMENT}
       hitbox={COMPUTER_HITBOX}
       onHoverStateChange={onHoverStateChange}
@@ -529,7 +553,7 @@ export function UniverseComputer({
           targetSize={targetSize}
           fillColor={BLACK_FILL_COLOR}
           wireframeColor={GREEN_WIREFRAME_COLOR}
-          wireframeOpacity={0.12}
+          wireframeOpacity={0.14}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
@@ -540,6 +564,7 @@ export function UniverseComputer({
 
 export function UniverseBass({
   viewIndex,
+  visible = true,
   onHoverStateChange,
   onSelect,
   activeSectionId,
@@ -549,6 +574,7 @@ export function UniverseBass({
     <UniverseAnchoredObject
       sectionId="music"
       viewIndex={viewIndex}
+      visible={visible}
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
       hitbox={BASS_HITBOX}
@@ -560,10 +586,10 @@ export function UniverseBass({
       {({ isHighlighted, isSurging: isItemSurging }) => (
         <WireframeModel
           path={BASS_MODEL_PATH}
-          targetSize={4.6}
+          targetSize={5.4}
           fillColor={BASS_FILL_COLOR}
           wireframeColor={BLUE_WIREFRAME_COLOR}
-          wireframeOpacity={0.12}
+          wireframeOpacity={0.14}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
