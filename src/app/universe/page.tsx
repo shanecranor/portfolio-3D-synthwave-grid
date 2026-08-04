@@ -21,9 +21,39 @@ const SECTION_NUMBERS: Record<UniverseSectionId, string> = {
   music: "03",
 };
 
+type UniverseSceneId = "intro" | UniverseSectionId;
+
+type UniverseScrollState = {
+  activeSectionId: UniverseSectionId | null;
+  revealProgress: Record<UniverseSceneId, number>;
+};
+
+const INITIAL_SCROLL_STATE: UniverseScrollState = {
+  activeSectionId: null,
+  revealProgress: {
+    intro: 1,
+    projects: 0,
+    photography: 0,
+    music: 0,
+  },
+};
+
+function clampProgress(value: number) {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function smootherStep(progress: number) {
+  const t = clampProgress(progress);
+
+  // Zero velocity and acceleration at each page center keeps the object nearly
+  // still there, while the pose continues changing everywhere in between.
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
 export default function UniversePage() {
-  const [activeSectionId, setActiveSectionId] =
-    useState<UniverseSectionId | null>(null);
+  const [scrollState, setScrollState] =
+    useState<UniverseScrollState>(INITIAL_SCROLL_STATE);
+  const { activeSectionId, revealProgress } = scrollState;
 
   useEffect(() => {
     const sections = Array.from(
@@ -33,18 +63,52 @@ export default function UniversePage() {
 
     const updateActiveSection = () => {
       frameId = undefined;
+      const scrollY = window.scrollY;
       const viewportCenter = window.innerHeight / 2;
-      const activeSection = sections.find((section) => {
-        const bounds = section.getBoundingClientRect();
-        return bounds.top <= viewportCenter && bounds.bottom > viewportCenter;
-      });
-      const nextSectionId = activeSection?.dataset.universeStage;
-
-      setActiveSectionId(
-        !nextSectionId || nextSectionId === "intro"
-          ? null
-          : (nextSectionId as UniverseSectionId),
+      const stageIds = sections.map(
+        (section) => section.dataset.universeStage as UniverseSceneId,
       );
+      const pageCenters = sections.map((section) => {
+        const bounds = section.getBoundingClientRect();
+
+        return bounds.top + scrollY + bounds.height / 2 - viewportCenter;
+      });
+      const nextRevealProgress: Record<UniverseSceneId, number> = {
+        intro: 0,
+        projects: 0,
+        photography: 0,
+        music: 0,
+      };
+      let activeIndex: number;
+
+      if (scrollY <= pageCenters[0]) {
+        activeIndex = 0;
+        nextRevealProgress[stageIds[activeIndex]] = 1;
+      } else if (scrollY >= pageCenters[pageCenters.length - 1]) {
+        activeIndex = pageCenters.length - 1;
+        nextRevealProgress[stageIds[activeIndex]] = 1;
+      } else {
+        const nextIndex = pageCenters.findIndex((center) => center >= scrollY);
+        const previousIndex = nextIndex - 1;
+        const segmentLength = Math.max(
+          pageCenters[nextIndex] - pageCenters[previousIndex],
+          1,
+        );
+        const linearProgress =
+          (scrollY - pageCenters[previousIndex]) / segmentLength;
+        const curvedProgress = smootherStep(linearProgress);
+
+        nextRevealProgress[stageIds[previousIndex]] = 1 - curvedProgress;
+        nextRevealProgress[stageIds[nextIndex]] = curvedProgress;
+        activeIndex = curvedProgress < 0.5 ? previousIndex : nextIndex;
+      }
+
+      const activeStageId = stageIds[activeIndex];
+      setScrollState({
+        activeSectionId:
+          activeStageId === "intro" ? null : activeStageId,
+        revealProgress: nextRevealProgress,
+      });
     };
 
     const scheduleUpdate = () => {
@@ -66,7 +130,10 @@ export default function UniversePage() {
   return (
     <div className="universe-page">
       <div className="three-js-canvas">
-        <ThreeJsUniverse activeSectionId={activeSectionId} />
+        <ThreeJsUniverse
+          activeSectionId={activeSectionId}
+          revealProgress={revealProgress}
+        />
       </div>
 
       <header className="universe-masthead">

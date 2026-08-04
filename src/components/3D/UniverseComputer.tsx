@@ -12,12 +12,16 @@ import {
   getUniverseResponsiveWidthFactor,
   getUniverseTitleAnchorX,
 } from "@/components/3D/universeLayout";
-import type { UniverseSectionId } from "@/data/universeSections";
+import {
+  UNIVERSE_SECTIONS,
+  type UniverseSectionId,
+} from "@/data/universeSections";
 
 type UniverseComputerProps = {
   viewIndex: number;
   modelIndex: number;
   visible?: boolean;
+  revealProgress?: number;
   targetSize?: number;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
@@ -32,6 +36,7 @@ type UniverseComputerProps = {
 type UniverseBassProps = {
   viewIndex: number;
   visible?: boolean;
+  revealProgress?: number;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
       isHovered: boolean,
@@ -45,6 +50,7 @@ type UniverseBassProps = {
 type UniverseReflexCameraProps = {
   viewIndex: number;
   visible?: boolean;
+  revealProgress?: number;
   onHoverStateChange?: (
       sectionId: UniverseSectionId,
       isHovered: boolean,
@@ -59,18 +65,13 @@ type AnchoredPlacementConfig = {
   xOffset: number;
   yOffset: number;
   zOffset: number;
-  rotationX?: number;
-  rotationY?: number;
-  rotationZ?: number;
-  spinX?: number;
-  spinY?: number;
-  spinZ?: number;
 };
 
 type UniverseAnchoredObjectProps = {
   sectionId: UniverseSectionId;
   viewIndex: number;
   visible: boolean;
+  revealProgress: number;
   placement: AnchoredPlacementConfig;
   hoverScale?: number;
   hitbox?: HitboxConfig;
@@ -125,36 +126,21 @@ const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const PORTRAIT_STACK_ASPECT = 0.95;
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
-    xOffset: 2.15,
+  xOffset: 2.15,
   yOffset: 0.35,
   zOffset: -1.4,
-
-  rotationX: 0.8,
-  rotationY: -1.5,
-  rotationZ: 0,
-  spinY: 0.3,
-  spinZ: 0.1,
 };
 
 const COMPUTER_PLACEMENT: AnchoredPlacementConfig = {
-    xOffset: -2.2,
+  xOffset: -2.2,
   yOffset: 0.42,
   zOffset: -1.45,
-  rotationX: 0.5,
-  rotationY: -Math.PI / 2,
-  rotationZ: 0,
-  spinY: 0.1,
 };
 
 const BASS_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: -2.15,
   yOffset: 0.3,
   zOffset: -1.55,
-  rotationX: Math.PI / 2,
-  rotationY: Math.PI - 0.2,
-  rotationZ: 0,
-  spinY: 0,
-  spinZ: -0.4,
 };
 
 const COMPUTER_HITBOX: HitboxConfig = {
@@ -318,6 +304,7 @@ function UniverseAnchoredObject({
   sectionId,
   viewIndex,
   visible,
+  revealProgress,
   placement,
   hoverScale = 1.12,
   hitbox,
@@ -334,8 +321,6 @@ function UniverseAnchoredObject({
   const hoverVelocityRef = useRef(0);
   const surgeScaleRef = useRef(isSurging ? 1 : 0);
   const surgeVelocityRef = useRef(0);
-  const revealRef = useRef(visible ? 1 : 0);
-  const revealVelocityRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const isDefaultView = viewIndex === 0;
@@ -382,35 +367,24 @@ function UniverseAnchoredObject({
     };
   }, [hoverFocus, isActivelyHovered, onHoverStateChange, sectionId]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     const anchor = anchorRef.current;
     const model = modelRef.current;
     if (!anchor || !model) return;
 
-    anchor.visible = isDefaultView && (visible || revealRef.current > 0.002);
+    const reveal = THREE.MathUtils.clamp(revealProgress, 0, 1);
+    anchor.visible = isDefaultView && reveal > 0.002;
     if (!isDefaultView) return;
-
-    const revealSpring = stepDampedSpring(
-      revealRef.current,
-      revealVelocityRef.current,
-      visible ? 1 : 0,
-      delta,
-      6,
-      1,
-    );
-    revealRef.current = THREE.MathUtils.clamp(revealSpring.value, 0, 1);
-    revealVelocityRef.current = revealSpring.velocity;
-
-    const elapsed = clock.getElapsedTime();
+    const modelPose = UNIVERSE_SECTIONS[sectionId].modelPose;
     anchor.position.set(
       titleAnchorX + placement.xOffset * horizontalSpreadScale,
-      DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset - (1 - revealRef.current) * 0.5,
+      DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset - (1 - reveal) * 0.5,
       DEFAULT_UNIVERSE_ANCHOR_Z + placement.zOffset,
     );
     model.rotation.set(
-      (placement.rotationX ?? 0) + elapsed * (placement.spinX ?? 0),
-      (placement.rotationY ?? 0) + elapsed * (placement.spinY ?? 0),
-      (placement.rotationZ ?? 0) + elapsed * (placement.spinZ ?? 0),
+      modelPose.rotation[0] + modelPose.revealRotationOffset[0] * (1 - reveal),
+      modelPose.rotation[1] + modelPose.revealRotationOffset[1] * (1 - reveal),
+      modelPose.rotation[2] + modelPose.revealRotationOffset[2] * (1 - reveal),
     );
 
     const targetObjectScale = isHighlighted ? hoverScale : 1;
@@ -439,25 +413,30 @@ function UniverseAnchoredObject({
     surgeVelocityRef.current = surgeSpring.velocity;
     anchor.scale.setScalar(
       responsiveScale *
+        modelPose.scale *
         hoverScaleRef.current *
-        revealRef.current *
+        reveal *
         (1 + surgeScaleRef.current * 0.18),
     );
   });
 
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
+    if (!isDefaultView || !visible) return;
+
     event.stopPropagation();
-    if (isDefaultView && visible) {
-      setIsHovered(true);
-    }
+    setIsHovered(true);
   };
 
   const handlePointerLeave = (event: ThreeEvent<PointerEvent>) => {
+    if (!visible) return;
+
     event.stopPropagation();
     setIsHovered(false);
   };
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!isDefaultView || !visible) return;
+
     event.stopPropagation();
     onSelect?.(sectionId, hoverFocus);
   };
@@ -492,6 +471,7 @@ function UniverseAnchoredObject({
 export function UniverseReflexCamera({
   viewIndex,
   visible = true,
+  revealProgress = visible ? 1 : 0,
   onHoverStateChange,
   onSelect,
   activeSectionId,
@@ -502,6 +482,7 @@ export function UniverseReflexCamera({
       sectionId="photography"
       viewIndex={viewIndex}
       visible={visible}
+      revealProgress={revealProgress}
       placement={REFLEX_CAMERA_PLACEMENT}
       hitbox={REFLEX_CAMERA_HITBOX}
       onHoverStateChange={onHoverStateChange}
@@ -528,6 +509,7 @@ export function UniverseComputer({
   viewIndex,
   modelIndex,
   visible = true,
+  revealProgress = visible ? 1 : 0,
   targetSize = 4.5,
   onHoverStateChange,
   onSelect,
@@ -541,6 +523,7 @@ export function UniverseComputer({
       sectionId="projects"
       viewIndex={viewIndex}
       visible={visible}
+      revealProgress={revealProgress}
       placement={COMPUTER_PLACEMENT}
       hitbox={COMPUTER_HITBOX}
       onHoverStateChange={onHoverStateChange}
@@ -566,6 +549,7 @@ export function UniverseComputer({
 export function UniverseBass({
   viewIndex,
   visible = true,
+  revealProgress = visible ? 1 : 0,
   onHoverStateChange,
   onSelect,
   activeSectionId,
@@ -576,6 +560,7 @@ export function UniverseBass({
       sectionId="music"
       viewIndex={viewIndex}
       visible={visible}
+      revealProgress={revealProgress}
       placement={BASS_PLACEMENT}
       hoverScale={1.08}
       hitbox={BASS_HITBOX}

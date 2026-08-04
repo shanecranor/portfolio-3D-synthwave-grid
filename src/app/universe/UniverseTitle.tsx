@@ -27,7 +27,6 @@ import {
   getUniverseTitleAnchorX,
   getUniverseTitleScale,
 } from "@/components/3D/universeLayout";
-import { stepDampedSpring } from "@/components/3D/stepDampedSpring";
 
 const UNIVERSE_TITLE_COLOR = "#ffffff";
 const UNIVERSE_TITLE_OUTLINE_GLOW_COLOR = new THREE.Color(0.88, 0.94, 1.95);
@@ -113,12 +112,12 @@ const AnimatedDashLine = ({
 };
 
 type UniverseTitleProps = {
-  visible: boolean;
+  revealProgress: number;
   textScale?: number;
 };
 
 export const UniverseTitle = ({
-  visible,
+  revealProgress,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
 }: UniverseTitleProps) => {
   const browserWidth = useThree((state) => state.size.width);
@@ -132,8 +131,6 @@ export const UniverseTitle = ({
     useRef<ComponentRef<typeof MeshTransmissionMaterial>>(null);
   const showTransmissionMaterialRef = useRef(false);
   const pointerMotionStrengthRef = useRef(0);
-  const revealRef = useRef(visible ? 1 : 0);
-  const revealVelocityRef = useRef(0);
   const lastPointerSampleRef = useRef<{
     x: number;
     y: number;
@@ -196,17 +193,8 @@ export const UniverseTitle = ({
     const root = rootRef.current;
     if (!root) return;
 
-    const revealSpring = stepDampedSpring(
-      revealRef.current,
-      revealVelocityRef.current,
-      visible ? 1 : 0,
-      delta,
-      6,
-      1,
-    );
-    revealRef.current = THREE.MathUtils.clamp(revealSpring.value, 0, 1);
-    revealVelocityRef.current = revealSpring.velocity;
-    root.visible = visible || revealRef.current > 0.002;
+    const reveal = THREE.MathUtils.clamp(revealProgress, 0, 1);
+    root.visible = reveal > 0.002;
 
     //mouse easing
     targetMouse.current.set(pointer.x, pointer.y);
@@ -239,11 +227,11 @@ export const UniverseTitle = ({
 
     root.position.set(
       titleAnchorX,
-      DEFAULT_UNIVERSE_ANCHOR_Y - (1 - revealRef.current) * 0.35,
+      DEFAULT_UNIVERSE_ANCHOR_Y - (1 - reveal) * 0.35,
       DEFAULT_UNIVERSE_ANCHOR_Z,
     );
     centerRef.current?.scale.setScalar(
-      responsiveTextScale * revealRef.current,
+      responsiveTextScale * reveal,
     );
 
     const t = clock.getElapsedTime();

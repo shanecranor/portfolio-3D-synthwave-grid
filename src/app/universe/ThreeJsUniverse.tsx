@@ -42,6 +42,7 @@ const SPHERE_GLOW_COLOR = [55, 35, 83];
 
 type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
+  revealProgress: Record<"intro" | UniverseSectionId, number>;
 };
 
 function RotatingStars() {
@@ -143,7 +144,10 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
   );
 });
 
-export function ThreeJsUniverse({ activeSectionId }: ThreeJsUniverseProps) {
+export function ThreeJsUniverse({
+  activeSectionId,
+  revealProgress,
+}: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
     () => new THREE.Color(...TERRAIN_COLOR.map((channel) => channel / 255)),
@@ -246,10 +250,11 @@ export function ThreeJsUniverse({ activeSectionId }: ThreeJsUniverseProps) {
       >
         <color attach="background" args={["#020105"]} />
         <CameraRig viewIndex={0} hoverFocus={hoverState?.focus ?? null} />
-        <UniverseTitle visible={activeSectionId === null} />
+        <UniverseTitle revealProgress={revealProgress.intro} />
         <UniverseReflexCamera
           viewIndex={0}
           visible={activeSectionId === "photography"}
+          revealProgress={revealProgress.photography}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
           activeSectionId={hoverState?.sectionId ?? null}
@@ -259,6 +264,7 @@ export function ThreeJsUniverse({ activeSectionId }: ThreeJsUniverseProps) {
           viewIndex={0}
           modelIndex={0}
           visible={activeSectionId === "projects"}
+          revealProgress={revealProgress.projects}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
           activeSectionId={hoverState?.sectionId ?? null}
@@ -267,6 +273,7 @@ export function ThreeJsUniverse({ activeSectionId }: ThreeJsUniverseProps) {
         <UniverseBass
           viewIndex={0}
           visible={activeSectionId === "music"}
+          revealProgress={revealProgress.music}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
           activeSectionId={hoverState?.sectionId ?? null}

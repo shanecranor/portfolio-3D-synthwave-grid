@@ -10,6 +10,11 @@ export type UniverseSectionData = {
   href: string;
   accent: string;
   accentRgb: string;
+  modelPose: {
+    rotation: [number, number, number];
+    revealRotationOffset: [number, number, number];
+    scale: number;
+  };
   external?: boolean;
 };
 
@@ -26,6 +31,11 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       href: "/code",
       accent: "#73d1ad",
       accentRgb: "115, 209, 173",
+      modelPose: {
+        rotation: [0.5, -Math.PI / 2, 0],
+        revealRotationOffset: [-0.18, -0.58, 0.08],
+        scale: 1,
+      },
     },
     photography: {
       id: "photography",
@@ -38,6 +48,11 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       href: "https://shane.cranor.org/photos",
       accent: "#ff86f7",
       accentRgb: "255, 134, 247",
+      modelPose: {
+        rotation: [0.8, -1.5, 0],
+        revealRotationOffset: [-0.16, -0.62, -0.1],
+        scale: 1,
+      },
       external: true,
     },
     music: {
@@ -51,5 +66,10 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       href: "/music",
       accent: "#73b4ff",
       accentRgb: "115, 180, 255",
+      modelPose: {
+        rotation: [Math.PI / 2, Math.PI - 0.2, 0],
+        revealRotationOffset: [0, -0.5, 0.18],
+        scale: 1,
+      },
     },
   };
