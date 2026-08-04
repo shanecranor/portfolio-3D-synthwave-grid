@@ -224,6 +224,11 @@ body {
   }
 }
 
+.universe-explore.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .universe-explore:hover,
 .universe-explore:focus-visible {
   color: white;

@@ -21,15 +21,23 @@ const SECTION_NUMBERS: Record<UniverseSectionId, string> = {
   music: "03",
 };
 
+const EXPLORE_FADE_VIEWPORT_FRACTION = 0.35;
+
+// 1 preserves the original crossfade. Higher values shrink both models more
+// around the midpoint, reducing how much they visually overlap.
+const MAIN_TRANSITION_CURVE_EXPONENT = 2;
+
 type UniverseSceneId = "intro" | UniverseSectionId;
 
 type UniverseScrollState = {
   activeSectionId: UniverseSectionId | null;
+  exploreProgress: number;
   revealProgress: Record<UniverseSceneId, number>;
 };
 
 const INITIAL_SCROLL_STATE: UniverseScrollState = {
   activeSectionId: null,
+  exploreProgress: 1,
   revealProgress: {
     intro: 1,
     projects: 0,
@@ -53,7 +61,7 @@ function smootherStep(progress: number) {
 export default function UniversePage() {
   const [scrollState, setScrollState] =
     useState<UniverseScrollState>(INITIAL_SCROLL_STATE);
-  const { activeSectionId, revealProgress } = scrollState;
+  const { activeSectionId, exploreProgress, revealProgress } = scrollState;
 
   useEffect(() => {
     const sections = Array.from(
@@ -98,15 +106,27 @@ export default function UniversePage() {
           (scrollY - pageCenters[previousIndex]) / segmentLength;
         const curvedProgress = smootherStep(linearProgress);
 
-        nextRevealProgress[stageIds[previousIndex]] = 1 - curvedProgress;
-        nextRevealProgress[stageIds[nextIndex]] = curvedProgress;
+        nextRevealProgress[stageIds[previousIndex]] = Math.pow(
+          1 - curvedProgress,
+          MAIN_TRANSITION_CURVE_EXPONENT,
+        );
+        nextRevealProgress[stageIds[nextIndex]] = Math.pow(
+          curvedProgress,
+          MAIN_TRANSITION_CURVE_EXPONENT,
+        );
         activeIndex = curvedProgress < 0.5 ? previousIndex : nextIndex;
       }
 
       const activeStageId = stageIds[activeIndex];
+      const exploreFadeDistance = Math.max(
+        window.innerHeight * EXPLORE_FADE_VIEWPORT_FRACTION,
+        1,
+      );
       setScrollState({
         activeSectionId:
           activeStageId === "intro" ? null : activeStageId,
+        exploreProgress:
+          1 - smootherStep(scrollY / exploreFadeDistance),
         revealProgress: nextRevealProgress,
       });
     };
@@ -172,7 +192,15 @@ export default function UniversePage() {
           <h1 className="sr-only">Shane Cranor</h1>
           <div className="universe-intro-copy">
             {/* <p>Developer · Musician · Photographer</p> */}
-            <a className="universe-explore" href="#projects">
+            <a
+              className={`universe-explore${
+                exploreProgress <= 0 ? " is-hidden" : ""
+              }`}
+              href="#projects"
+              style={{ opacity: exploreProgress }}
+              aria-hidden={exploreProgress <= 0}
+              tabIndex={exploreProgress <= 0 ? -1 : undefined}
+            >
               Explore
               <span aria-hidden="true">↓</span>
             </a>
