@@ -86,8 +86,8 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
       <Detailed distances={[3, 25]}>
         <NoisySphere
           radius={10}
-          widthSegments={140}
-          heightSegments={34}
+          widthSegments={160}
+          heightSegments={61}
           noiseAmount={0.24}
           edgeColor={edgeColor}
           edgeOpacity={0.62}
@@ -102,7 +102,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         <NoisySphere
           radius={10}
           widthSegments={36}
-          heightSegments={18}
+          heightSegments={19}
           noiseAmount={0.24}
           edgeColor={edgeColor}
           edgeOpacity={0.5}
@@ -150,7 +150,7 @@ export function ThreeJsUniverse({
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
-    () => new THREE.Color(...TERRAIN_COLOR.map((channel) => channel / 255)),
+    () => new THREE.Color(...TERRAIN_COLOR.map((channel) => channel / 255 * 1.2)),
     [],
   );
   const sphereGlowColor = useMemo(
