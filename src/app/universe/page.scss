@@ -72,6 +72,13 @@ body {
   filter: saturate(1.15) contrast(1.08) brightness(1.05);
 }
 
+.universe-page::after {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+}
 
 .universe-masthead {
   position: fixed;
@@ -328,11 +335,7 @@ body {
 
 @media (max-width: 900px) and (orientation: portrait),
   (max-aspect-ratio: 4 / 5) {
-  .universe-page::after {
-    background:
-      linear-gradient(180deg, rgba(2, 1, 5, 0.2), transparent 35%, rgba(2, 1, 5, 0.72) 82%),
-      radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.42) 100%);
-  }
+
 
   .universe-masthead span {
     display: none;
@@ -409,12 +412,6 @@ body {
 }
 
 @media (max-height: 520px) and (orientation: landscape) {
-  .universe-page::after {
-    background:
-      linear-gradient(90deg, rgba(2, 1, 5, 0.35), transparent 34%, transparent 66%, rgba(2, 1, 5, 0.48)),
-      radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.38) 100%);
-  }
-
   .universe-masthead {
     padding: 1rem 1.25rem;
 
