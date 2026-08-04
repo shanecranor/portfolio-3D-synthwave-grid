@@ -72,16 +72,6 @@ body {
   filter: saturate(1.15) contrast(1.08) brightness(1.05);
 }
 
-.universe-page::after {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgba(2, 1, 5, 0.72), transparent 30%, transparent 70%, rgba(2, 1, 5, 0.72)),
-    radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.38) 100%);
-}
 
 .universe-masthead {
   position: fixed;
