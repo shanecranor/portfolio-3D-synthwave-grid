@@ -86,49 +86,47 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
 }) {
   return (
     <>
-    <group position={spherePosition}>
-      <Detailed distances={[3, 25]}>
-        <NoisySphere
+      <group position={spherePosition}>
+        <Detailed distances={[3, 25]}>
+          <NoisySphere
+            radius={10}
+            widthSegments={160}
+            heightSegments={61}
+            noiseAmount={0.24}
+            edgeColor={edgeColor}
+            edgeOpacity={0.62}
+            flatCenter
+            poleNoiseFloor={0}
+            equatorPower={0.85}
+            yNoiseScale={0.4}
+            displaceYScale={0}
+            cylinderMorph={0.25}
+            rotateAnimation={[0.006, 0, 0]}
+          />
+          <NoisySphere
+            radius={10}
+            widthSegments={36}
+            heightSegments={19}
+            noiseAmount={0.24}
+            edgeColor={edgeColor}
+            edgeOpacity={0.5}
+            flatCenter
+            poleNoiseFloor={0}
+            equatorPower={0.85}
+            yNoiseScale={0.4}
+            displaceYScale={0}
+            cylinderMorph={0.25}
+            rotateAnimation={[0.006, 0, 0]}
+          />
+        </Detailed>
+        <GlowSphere
           radius={10}
-          widthSegments={160}
-          heightSegments={61}
-          noiseAmount={0.24}
-          edgeColor={edgeColor}
-          edgeOpacity={0.62}
-          flatCenter
-          poleNoiseFloor={0}
-          equatorPower={0.85}
-          yNoiseScale={0.4}
-          displaceYScale={0}
-          cylinderMorph={0.25}
-          rotateAnimation={[0.006, 0, 0]}
+          glowColor={glowColor}
+          glowOpacity={0.08}
+          glowSpread={2.8}
         />
-        <NoisySphere
-          radius={10}
-          widthSegments={36}
-          heightSegments={19}
-          noiseAmount={0.24}
-          edgeColor={edgeColor}
-          edgeOpacity={0.5}
-          flatCenter
-          poleNoiseFloor={0}
-          equatorPower={0.85}
-          yNoiseScale={0.4}
-          displaceYScale={0}
-          cylinderMorph={0.25}
-          rotateAnimation={[0.006, 0, 0]}
-        />
-      </Detailed>
-      <GlowSphere
-        radius={10}
-        glowColor={glowColor}
-        glowOpacity={0.08}
-        glowSpread={2.8}
-      />
-            <RotatingStars />
-
+        <RotatingStars />
       </group>
-
 
       <EffectComposer multisampling={0}>
         <Bloom
@@ -158,7 +156,8 @@ export function ThreeJsUniverse({
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
-    () => new THREE.Color(...TERRAIN_COLOR.map((channel) => channel / 255 * 1.2)),
+    () =>
+      new THREE.Color(...TERRAIN_COLOR.map((channel) => (channel / 255) * 1.2)),
     [],
   );
   const sphereGlowColor = useMemo(
@@ -209,10 +208,7 @@ export function ThreeJsUniverse({
 
   const handleSectionSelect = useCallback(
     (sectionId: UniverseSectionId, focus: CameraHoverFocus) => {
-      if (
-        navigationTimeoutRef.current ||
-        sectionId !== activeSectionId
-      ) {
+      if (navigationTimeoutRef.current || sectionId !== activeSectionId) {
         return;
       }
 
@@ -238,8 +234,7 @@ export function ThreeJsUniverse({
     () =>
       ({
         "--universe-wireframe-green": accent?.accent ?? "#73d1ad",
-        "--universe-wireframe-green-rgb":
-          accent?.accentRgb ?? "115, 209, 173",
+        "--universe-wireframe-green-rgb": accent?.accentRgb ?? "115, 209, 173",
       }) as CSSProperties,
     [accent],
   );
