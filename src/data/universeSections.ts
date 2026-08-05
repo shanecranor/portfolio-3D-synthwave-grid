@@ -56,7 +56,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       accentRgb: "255, 134, 247",
       spherePosition: [-3, -0.75, -4.5],
       modelPose: {
-        rotation: [0.8, -1.5, 0],
+        rotation: [0, -1.1, 0.1],
         revealRotationOffset: [-0.16, -0.62, -0.1],
         scale: 1,
       },
