@@ -73,6 +73,7 @@ type UniverseAnchoredObjectProps = {
   visible: boolean;
   revealProgress: number;
   placement: AnchoredPlacementConfig;
+  objectScale: [number, number, number];
   hoverScale?: number;
   hitbox?: HitboxConfig;
   onHoverStateChange?: (
@@ -124,6 +125,12 @@ const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const PORTRAIT_STACK_ASPECT = 0.95;
+
+// These scale the model and its hitbox together. The values are applied before
+// the responsive, reveal, hover, and click-surge scale animations.
+export const COMPUTER_SCALE: [number, number, number] = [1, 1, 1];
+export const REFLEX_CAMERA_SCALE: [number, number, number] = [1, 1, 1];
+export const BASS_SCALE: [number, number, number] = [1, 1, 1];
 
 const REFLEX_CAMERA_PLACEMENT: AnchoredPlacementConfig = {
   xOffset: 2.15,
@@ -306,6 +313,7 @@ function UniverseAnchoredObject({
   visible,
   revealProgress,
   placement,
+  objectScale,
   hoverScale = 1.12,
   hitbox,
   onHoverStateChange,
@@ -445,6 +453,7 @@ function UniverseAnchoredObject({
     <group ref={anchorRef}>
       <group
         ref={modelRef}
+        scale={objectScale}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         onClick={handleClick}
@@ -484,6 +493,7 @@ export function UniverseReflexCamera({
       visible={visible}
       revealProgress={revealProgress}
       placement={REFLEX_CAMERA_PLACEMENT}
+      objectScale={REFLEX_CAMERA_SCALE}
       hitbox={REFLEX_CAMERA_HITBOX}
       onHoverStateChange={onHoverStateChange}
       onSelect={onSelect}
@@ -525,6 +535,7 @@ export function UniverseComputer({
       visible={visible}
       revealProgress={revealProgress}
       placement={COMPUTER_PLACEMENT}
+      objectScale={COMPUTER_SCALE}
       hitbox={COMPUTER_HITBOX}
       onHoverStateChange={onHoverStateChange}
       onSelect={onSelect}
@@ -562,6 +573,7 @@ export function UniverseBass({
       visible={visible}
       revealProgress={revealProgress}
       placement={BASS_PLACEMENT}
+      objectScale={BASS_SCALE}
       hoverScale={1.08}
       hitbox={BASS_HITBOX}
       onHoverStateChange={onHoverStateChange}

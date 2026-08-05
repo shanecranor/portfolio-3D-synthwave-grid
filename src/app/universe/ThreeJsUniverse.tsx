@@ -43,6 +43,7 @@ const SPHERE_GLOW_COLOR = [55, 35, 83];
 type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
   revealProgress: Record<"intro" | UniverseSectionId, number>;
+  spherePosition: [number, number, number];
 };
 
 function RotatingStars() {
@@ -52,12 +53,12 @@ function RotatingStars() {
     const starfield = starfieldRef.current;
     if (!starfield) return;
 
-    starfield.rotation.y += delta * 0.018;
-    starfield.rotation.x = THREE.MathUtils.lerp(
-      starfield.rotation.x,
-      0.12,
-      1 - Math.exp(-2 * delta),
-    );
+    starfield.rotation.x += delta * 0.008;
+    // starfield.rotation.x = THREE.MathUtils.lerp(
+    //   starfield.rotation.x,
+    //   0.12,
+    //   1 - Math.exp(-2 * delta),
+    // );
   });
 
   return (
@@ -77,12 +78,15 @@ function RotatingStars() {
 const UniverseBackdrop = memo(function UniverseBackdrop({
   edgeColor,
   glowColor,
+  spherePosition,
 }: {
   edgeColor: THREE.Color;
   glowColor: THREE.Color;
+  spherePosition: [number, number, number];
 }) {
   return (
     <>
+    <group position={spherePosition}>
       <Detailed distances={[3, 25]}>
         <NoisySphere
           radius={10}
@@ -121,7 +125,10 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         glowOpacity={0.08}
         glowSpread={2.8}
       />
-      <RotatingStars />
+            <RotatingStars />
+
+      </group>
+
 
       <EffectComposer multisampling={0}>
         <Bloom
@@ -147,6 +154,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
 export function ThreeJsUniverse({
   activeSectionId,
   revealProgress,
+  spherePosition,
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
@@ -279,7 +287,11 @@ export function ThreeJsUniverse({
           activeSectionId={hoverState?.sectionId ?? null}
           surgingSectionId={surgingSectionId}
         />
-        <UniverseBackdrop edgeColor={edgeColor} glowColor={sphereGlowColor} />
+        <UniverseBackdrop
+          edgeColor={edgeColor}
+          glowColor={sphereGlowColor}
+          spherePosition={spherePosition}
+        />
       </Canvas>
       <Loader />
     </div>
