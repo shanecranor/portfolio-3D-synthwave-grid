@@ -128,7 +128,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         <RotatingStars />
       </group>
 
-      <EffectComposer multisampling={0}>
+      <EffectComposer >
         <Bloom
           luminanceThreshold={0}
           intensity={0.86}
@@ -136,14 +136,14 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
           mipmapBlur
           opacity={0.72}
         />
-        <Noise opacity={0.008} />
+        <Noise opacity={0.026} blendFunction={BlendFunction.PIN_LIGHT} />
+        <Scanline density={1} opacity={0.1} scrollSpeed={0} />
         <Vignette
           offset={0.32}
           darkness={0.68}
           blendFunction={BlendFunction.DARKEN}
         />
         <BrightnessContrast brightness={-0.01} contrast={0.1} />
-        <Scanline density={1} opacity={0.065} scrollSpeed={0.006} />
       </EffectComposer>
     </>
   );
@@ -248,8 +248,8 @@ export function ThreeJsUniverse({
     >
       <Canvas
         camera={{ fov: 75, position: [0, 10.3, 0] }}
-        dpr={[0.6, 1.25]}
-        gl={{ alpha: false, antialias: true }}
+        dpr={[0.5, 2]}
+        // gl={{ alpha: false, antialias: true }}
       >
         <color attach="background" args={["#020105"]} />
         <CameraRig viewIndex={0} hoverFocus={hoverState?.focus ?? null} />

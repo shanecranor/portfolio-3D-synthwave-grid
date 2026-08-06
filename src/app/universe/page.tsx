@@ -227,7 +227,6 @@ export default function UniversePage() {
         >
           <h1 className="sr-only">Shane Cranor</h1>
           <div className="universe-intro-copy">
-            {/* <p>Developer · Musician · Photographer</p> */}
             <a
               className={`universe-explore${
                 exploreProgress <= 0 ? " is-hidden" : ""

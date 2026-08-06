@@ -253,13 +253,12 @@ body {
 
 .universe-artifact-copy {
   position: relative;
-  width: min(100%, 34rem);
   padding: clamp(1.3rem, 3vw, 2.35rem);
   pointer-events: auto;
-  background: linear-gradient(135deg, rgba(6, 3, 12, 0.84), rgba(6, 3, 12, 0.46));
+  background: linear-gradient(135deg, rgba(6, 3, 12, 0.84), rgba(6, 3, 12, 0.4));
   border-left: 1px solid rgba(var(--section-accent-rgb), 0.72);
   box-shadow: -24px 0 70px rgba(var(--section-accent-rgb), 0.07);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
 }
 
 .universe-section-number {
