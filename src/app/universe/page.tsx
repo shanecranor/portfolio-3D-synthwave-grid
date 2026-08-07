@@ -264,9 +264,9 @@ export default function UniversePage() {
               }
             >
               <article className="universe-artifact-copy">
-                <p className="universe-section-number">
+                {/* <p className="universe-section-number">
                   {SECTION_NUMBERS[sectionId]} / {section.status}
-                </p>
+                </p> */}
                 <h2>{section.label}</h2>
                 <p className="universe-section-description">
                   {section.description}
