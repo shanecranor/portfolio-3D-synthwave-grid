@@ -65,7 +65,7 @@ body {
 }
 
 .universe-shell.is-tuning {
-  filter: saturate(1.08) contrast(1.04) brightness(1.03);
+  filter: saturate(1.08) contrast(2.04) brightness(2.03);
 }
 
 .universe-shell.is-routing {
@@ -86,26 +86,20 @@ body {
   left: 0;
   right: 0;
   z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: clamp(1.2rem, 2.5vw, 2rem) clamp(1.25rem, 4vw, 4rem);
   pointer-events: none;
-  font-family: var(--font-open-sans), sans-serif;
-  text-transform: uppercase;
   letter-spacing: 0.24em;
   font-size: 0.68rem;
   color: var(--universe-muted);
 
   a {
     display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 4rem;
+    height: 2rem;
     place-items: center;
     pointer-events: auto;
     color: var(--universe-paper);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
     font-family: "Astro Armada", sans-serif;
     font-size: 0.78rem;
     letter-spacing: 0.08em;
