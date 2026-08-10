@@ -31,6 +31,28 @@ function seededRandom(seed: number) {
   return value - Math.floor(value);
 }
 
+function getDepthFade(
+  progress: number,
+  fadeInPortion: number,
+  fadeOutPortion: number,
+) {
+  const fadeIn =
+    fadeInPortion > 0
+      ? THREE.MathUtils.smoothstep(progress, 0, fadeInPortion)
+      : 1;
+  const fadeOut =
+    fadeOutPortion > 0
+      ? 1 -
+        THREE.MathUtils.smoothstep(
+          progress,
+          1 - fadeOutPortion,
+          1,
+        )
+      : 1;
+
+  return fadeIn * fadeOut;
+}
+
 function createColumns(config: HackerRainConfig) {
   const { columns, rows, columnSpacing, rowSpacing } = config.field;
   const characters = config.chars.length > 0 ? config.chars : ["0"];
@@ -69,6 +91,7 @@ export function HackerSymbolRain({
   const layerFadeRefs = useRef<number[]>(
     config.layers.map(() => (active ? 1 : 0)),
   );
+  const layerRefs = useRef<Record<number, THREE.Group | null>>({});
   const columnRefs = useRef<Record<string, THREE.Group | null>>({});
   const textRefs = useRef<Record<string, HackerRainText | null>>({});
   const characters = useMemo(() => config.chars.join(""), [config.chars]);
@@ -102,12 +125,43 @@ export function HackerSymbolRain({
     }
 
     root.visible = maxFade > 0.001;
-    root.scale.setScalar(config.scale * (0.9 + maxFade * 0.1));
-
+    // root.scale.setScalar(config.scale * (0.9 + maxFade * 0.1));
+    root.scale.setScalar(config.scale);
     const elapsed = clock.getElapsedTime();
     for (const [layerIndex, layerColumns] of columnsByLayer.entries()) {
       const layer = config.layers[layerIndex];
       const layerFade = layerFadeRefs.current[layerIndex];
+      const layerGroup = layerRefs.current[layerIndex];
+      const depthMotion = config.depthMotion;
+      let depthFade = 1;
+
+      if (
+        depthMotion.enabled &&
+        depthMotion.travelDistance > 0 &&
+        depthMotion.travelSpeed > 0
+      ) {
+        const phase =
+          layer.depthPhase ?? layerIndex / Math.max(1, config.layers.length);
+        const progress =
+          (phase +
+            ((elapsed * depthMotion.travelSpeed) /
+              depthMotion.travelDistance) *
+              (layer.depthSpeedMultiplier ?? 1)) %
+          1;
+
+        if (layerGroup) {
+          layerGroup.position.z =
+            layer.z + progress * depthMotion.travelDistance;
+        }
+
+        depthFade = getDepthFade(
+          progress,
+          depthMotion.fadeInPortion,
+          depthMotion.fadeOutPortion,
+        );
+      } else if (layerGroup) {
+        layerGroup.position.z = layer.z;
+      }
 
       for (const column of layerColumns) {
         const columnGroup = columnRefs.current[column.id];
@@ -119,7 +173,14 @@ export function HackerSymbolRain({
 
         const text = textRefs.current[column.id];
         if (text) {
-          text.fillOpacity = layer.opacity * layerFade;
+          const easedLayerFade = active
+            ? Math.pow(
+                THREE.MathUtils.clamp(layerFade, 0, 1),
+                config.animation.fadeInEasingPower,
+              )
+            : layerFade;
+
+          text.fillOpacity = layer.opacity * easedLayerFade * depthFade;
         }
       }
     }
@@ -132,7 +193,13 @@ export function HackerSymbolRain({
       rotation={config.rotation}
     >
       {config.layers.map((layer, layerIndex) => (
-        <group key={`layer-${layerIndex}`} position={[0, 0, layer.z]}>
+        <group
+          key={`layer-${layerIndex}`}
+          ref={(group) => {
+            layerRefs.current[layerIndex] = group;
+          }}
+          position={[0, 0, layer.z]}
+        >
           {columnsByLayer[layerIndex].map((column) => (
             <group
               key={column.id}

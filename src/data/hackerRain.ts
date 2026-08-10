@@ -9,6 +9,8 @@ export type HackerRainLayerConfig = {
   speedMultiplier: number;
   fadeInSpeedMultiplier?: number;
   fadeOutSpeedMultiplier?: number;
+  depthPhase?: number;
+  depthSpeedMultiplier?: number;
 };
 
 export type HackerRainConfig = {
@@ -28,7 +30,15 @@ export type HackerRainConfig = {
   animation: {
     fallSpeed: number;
     fadeInSpeed: number;
+    fadeInEasingPower: number;
     fadeOutSpeed: number;
+  };
+  depthMotion: {
+    enabled: boolean;
+    travelDistance: number;
+    travelSpeed: number;
+    fadeInPortion: number;
+    fadeOutPortion: number;
   };
   position: [number, number, number];
   rotation: [number, number, number];
@@ -56,8 +66,8 @@ export const HACKER_RAIN_CONFIG: HackerRainConfig = {
   //   { z: 6.0, opacity: 0.01, speedMultiplier: 0.6 },
   // ],
     layers: [
-    { z: -0.5, opacity: 0.1, speedMultiplier: 1 },
-    { z: -0.2, opacity: 0.2, speedMultiplier: 1 },
+    { z: -0.5, opacity: 0.1, speedMultiplier: 1.4 },
+    // { z: -0.2, opacity: 0.2, speedMultiplier: 1.2 },
      { z: 0.2, opacity: 0.7, speedMultiplier: 1 },
     { z: 2, opacity: 0.2, speedMultiplier: 1 },
     { z: 4, opacity: 0.05, speedMultiplier: 1 },
@@ -65,8 +75,16 @@ export const HACKER_RAIN_CONFIG: HackerRainConfig = {
   ],
   animation: {
     fallSpeed: 0.2,
-    fadeInSpeed: 1.2,
+    fadeInSpeed: 1,
+    fadeInEasingPower: 2,
     fadeOutSpeed: 7,
+  },
+  depthMotion: {
+    enabled: true,
+    travelDistance: 1,
+    travelSpeed: 0.15,
+    fadeInPortion: 0.5,
+    fadeOutPortion: 0.5,
   },
   position: [0, DEFAULT_UNIVERSE_ANCHOR_Y+2, DEFAULT_UNIVERSE_ANCHOR_Z - 3.45],
   rotation: [0, 0, 0],
