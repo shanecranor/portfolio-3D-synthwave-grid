@@ -45,6 +45,7 @@ type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
   revealProgress: Record<"intro" | UniverseSectionId, number>;
   spherePosition: [number, number, number];
+  actionHoverSectionId: UniverseSectionId | null;
 };
 
 function RotatingStars() {
@@ -154,6 +155,7 @@ export function ThreeJsUniverse({
   activeSectionId,
   revealProgress,
   spherePosition,
+  actionHoverSectionId,
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
@@ -229,7 +231,9 @@ export function ThreeJsUniverse({
     [activeSectionId, router],
   );
 
-  const accentSection = hoverState?.sectionId ?? activeSectionId;
+  const highlightedSectionId =
+    actionHoverSectionId ?? hoverState?.sectionId ?? null;
+  const accentSection = highlightedSectionId ?? activeSectionId;
   const accent = accentSection ? UNIVERSE_SECTIONS[accentSection] : null;
   const shellStyle = useMemo(
     () =>
@@ -242,7 +246,9 @@ export function ThreeJsUniverse({
 
   return (
     <div
-      className={`universe-shell${hoverState ? " is-tuning" : ""}${
+      className={`universe-shell${
+        hoverState || actionHoverSectionId ? " is-tuning" : ""
+      }${
         surgingSectionId ? " is-routing" : ""
       }`}
       style={shellStyle}
@@ -261,7 +267,7 @@ export function ThreeJsUniverse({
           revealProgress={revealProgress.photography}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
-          activeSectionId={hoverState?.sectionId ?? null}
+          activeSectionId={highlightedSectionId}
           surgingSectionId={surgingSectionId}
         />
         <UniverseComputer
@@ -271,11 +277,11 @@ export function ThreeJsUniverse({
           revealProgress={revealProgress.projects}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
-          activeSectionId={hoverState?.sectionId ?? null}
+          activeSectionId={highlightedSectionId}
           surgingSectionId={surgingSectionId}
         />
         <group position={spherePosition}>
-          <HackerSymbolRain active={hoverState?.sectionId === "projects"} />
+        <HackerSymbolRain active={highlightedSectionId === "projects"} />
         </group>
         <UniverseBass
           viewIndex={0}
@@ -283,7 +289,7 @@ export function ThreeJsUniverse({
           revealProgress={revealProgress.music}
           onHoverStateChange={handleSectionHoverStateChange}
           onSelect={handleSectionSelect}
-          activeSectionId={hoverState?.sectionId ?? null}
+          activeSectionId={highlightedSectionId}
           surgingSectionId={surgingSectionId}
         />
         <UniverseBackdrop

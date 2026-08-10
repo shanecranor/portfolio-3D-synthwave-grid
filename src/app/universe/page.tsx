@@ -82,6 +82,8 @@ function interpolateSpherePosition(
 export default function UniversePage() {
   const [scrollState, setScrollState] =
     useState<UniverseScrollState>(INITIAL_SCROLL_STATE);
+  const [actionHoverSectionId, setActionHoverSectionId] =
+    useState<UniverseSectionId | null>(null);
   const {
     activeSectionId,
     exploreProgress,
@@ -189,6 +191,7 @@ export default function UniversePage() {
           activeSectionId={activeSectionId}
           revealProgress={revealProgress}
           spherePosition={spherePosition}
+          actionHoverSectionId={actionHoverSectionId}
         />
       </div>
 
@@ -247,6 +250,13 @@ export default function UniversePage() {
           const linkProps = section.external
             ? { target: "_blank", rel: "noreferrer" }
             : {};
+          const actionInteractionProps =
+            {
+              onMouseEnter: () => setActionHoverSectionId(sectionId),
+              onMouseLeave: () => setActionHoverSectionId(null),
+              onFocus: () => setActionHoverSectionId(sectionId),
+              onBlur: () => setActionHoverSectionId(null),
+            };
 
           return (
             <section
@@ -281,12 +291,17 @@ export default function UniversePage() {
                     className="universe-section-link"
                     href={section.href}
                     {...linkProps}
+                    {...actionInteractionProps}
                   >
                     {section.actionLabel}
                     <span aria-hidden="true">↗</span>
                   </a>
                 ) : (
-                  <Link className="universe-section-link" href={section.href}>
+                  <Link
+                    className="universe-section-link"
+                    href={section.href}
+                    {...actionInteractionProps}
+                  >
                     {section.actionLabel}
                     <span aria-hidden="true">→</span>
                   </Link>
