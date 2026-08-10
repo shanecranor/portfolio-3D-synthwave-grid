@@ -19,6 +19,8 @@ type HackerRainColumn = {
   x: number;
   phase: number;
   speed: number;
+  opacityPhase: number;
+  opacitySpeed: number;
   text: string;
 };
 
@@ -77,6 +79,10 @@ function createColumns(config: HackerRainConfig) {
         x: (columnIndex - (columns - 1) / 2) * columnSpacing,
         phase: seededRandom(seed + 31) * travelDistance,
         speed: layerSpeed * THREE.MathUtils.lerp(0.75, 1.25, seededRandom(seed + 47)),
+        opacityPhase: seededRandom(seed + 59),
+        opacitySpeed:
+          config.columnOpacity.pulseSpeed *
+          THREE.MathUtils.lerp(0.8, 1.2, seededRandom(seed + 71)),
         text,
       } satisfies HackerRainColumn;
     });
@@ -164,10 +170,36 @@ export function HackerSymbolRain({
       }
 
       for (const column of layerColumns) {
+        const distance =
+          (column.phase + elapsed * column.speed) % travelDistance;
+        const columnProgress = distance / travelDistance;
+        let columnFade = 1;
+
+        if (config.columnOpacity.enabled) {
+          const travelFade = getDepthFade(
+            columnProgress,
+            config.columnOpacity.fadeInPortion,
+            config.columnOpacity.fadeOutPortion,
+          );
+          const pulseProgress =
+            0.5 +
+            0.5 *
+              Math.sin(
+                (elapsed * column.opacitySpeed + column.opacityPhase) *
+                  Math.PI *
+                  2,
+              );
+          const pulseFade = THREE.MathUtils.lerp(
+            config.columnOpacity.pulseMin,
+            config.columnOpacity.pulseMax,
+            pulseProgress,
+          );
+
+          columnFade = travelFade * pulseFade;
+        }
+
         const columnGroup = columnRefs.current[column.id];
         if (columnGroup) {
-          const distance =
-            (column.phase + elapsed * column.speed) % travelDistance;
           columnGroup.position.y = maxColumnY - distance;
         }
 
@@ -180,7 +212,8 @@ export function HackerSymbolRain({
               )
             : layerFade;
 
-          text.fillOpacity = layer.opacity * easedLayerFade * depthFade;
+          text.fillOpacity =
+            layer.opacity * easedLayerFade * depthFade * columnFade;
         }
       }
     }

@@ -40,6 +40,14 @@ export type HackerRainConfig = {
     fadeInPortion: number;
     fadeOutPortion: number;
   };
+  columnOpacity: {
+    enabled: boolean;
+    fadeInPortion: number;
+    fadeOutPortion: number;
+    pulseMin: number;
+    pulseMax: number;
+    pulseSpeed: number;
+  };
   position: [number, number, number];
   rotation: [number, number, number];
   scale: number;
@@ -65,10 +73,10 @@ export const HACKER_RAIN_CONFIG: HackerRainConfig = {
   //   { z: 4.0, opacity: 0.05, speedMultiplier: 1.4 },
   //   { z: 6.0, opacity: 0.01, speedMultiplier: 0.6 },
   // ],
-    layers: [
-    { z: -0.5, opacity: 0.1, speedMultiplier: 1.4 },
-    // { z: -0.2, opacity: 0.2, speedMultiplier: 1.2 },
-     { z: 0.2, opacity: 0.7, speedMultiplier: 1 },
+  layers: [
+    { z: -3, opacity: 0.2, speedMultiplier: 1.2 },
+    { z: -0.5, opacity: 0.7, speedMultiplier: 1.4 },
+    { z: 0.2, opacity: 0.7, speedMultiplier: 1 },
     { z: 2, opacity: 0.2, speedMultiplier: 1 },
     { z: 4, opacity: 0.05, speedMultiplier: 1 },
     { z: 6.0, opacity: 0.01, speedMultiplier: 1 },
@@ -83,10 +91,22 @@ export const HACKER_RAIN_CONFIG: HackerRainConfig = {
     enabled: true,
     travelDistance: 1,
     travelSpeed: 0.15,
-    fadeInPortion: 0.5,
-    fadeOutPortion: 0.5,
+    fadeInPortion: 0.2,
+    fadeOutPortion: 0.2,
   },
-  position: [0, DEFAULT_UNIVERSE_ANCHOR_Y+2, DEFAULT_UNIVERSE_ANCHOR_Z - 3.45],
+  columnOpacity: {
+    enabled: true,
+    fadeInPortion: 0.08,
+    fadeOutPortion: 0.22,
+    pulseMin: 0.5,
+    pulseMax: 1,
+    pulseSpeed: 0.5,
+  },
+  position: [
+    0,
+    DEFAULT_UNIVERSE_ANCHOR_Y + 2,
+    DEFAULT_UNIVERSE_ANCHOR_Z - 3.45,
+  ],
   rotation: [0, 0, 0],
   scale: 1,
 };
