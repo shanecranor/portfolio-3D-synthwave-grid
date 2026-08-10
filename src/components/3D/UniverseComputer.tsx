@@ -6,7 +6,6 @@ import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { CameraHoverFocus } from "@/components/3D/CameraRig";
 import { stepDampedSpring } from "@/components/3D/stepDampedSpring";
-import { HackerSymbolRain } from "@/components/3D/HackerSymbolRain";
 import {
   DEFAULT_UNIVERSE_ANCHOR_Y,
   DEFAULT_UNIVERSE_ANCHOR_Z,
@@ -544,18 +543,15 @@ export function UniverseComputer({
       isSurging={surgingSectionId === "projects"}
     >
       {({ isHighlighted, isSurging: isItemSurging }) => (
-        <>
-          <HackerSymbolRain active={isHighlighted} />
-          <WireframeModel
-            path={activeModelPath}
-            targetSize={targetSize}
-            fillColor={BLACK_FILL_COLOR}
-            wireframeColor={GREEN_WIREFRAME_COLOR}
-            wireframeOpacity={0.14}
-            isHighlighted={isHighlighted}
-            isSurging={isItemSurging}
-          />
-        </>
+        <WireframeModel
+          path={activeModelPath}
+          targetSize={targetSize}
+          fillColor={BLACK_FILL_COLOR}
+          wireframeColor={GREEN_WIREFRAME_COLOR}
+          wireframeOpacity={0.14}
+          isHighlighted={isHighlighted}
+          isSurging={isItemSurging}
+        />
       )}
     </UniverseAnchoredObject>
   );

@@ -102,7 +102,7 @@ export function HackerSymbolRain({
     }
 
     root.visible = maxFade > 0.001;
-    root.scale.setScalar(0.9 + maxFade * 0.1);
+    root.scale.setScalar(config.scale * (0.9 + maxFade * 0.1));
 
     const elapsed = clock.getElapsedTime();
     for (const [layerIndex, layerColumns] of columnsByLayer.entries()) {

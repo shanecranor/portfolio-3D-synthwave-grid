@@ -23,6 +23,7 @@ import { BlendFunction } from "postprocessing";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { CameraRig, type CameraHoverFocus } from "@/components/3D/CameraRig";
+import { HackerSymbolRain } from "@/components/3D/HackerSymbolRain";
 import { GlowSphere } from "@/components/3D/GlowSphere";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import {
@@ -128,7 +129,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         <RotatingStars />
       </group>
 
-      <EffectComposer >
+      <EffectComposer>
         <Bloom
           luminanceThreshold={0}
           intensity={0.86}
@@ -273,6 +274,9 @@ export function ThreeJsUniverse({
           activeSectionId={hoverState?.sectionId ?? null}
           surgingSectionId={surgingSectionId}
         />
+        <group position={spherePosition}>
+          <HackerSymbolRain active={hoverState?.sectionId === "projects"} />
+        </group>
         <UniverseBass
           viewIndex={0}
           visible={activeSectionId === "music"}
