@@ -66,7 +66,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       id: "music",
       label: "Music",
       description:
-        "In my free time, I play bass, guitar, drums, keyboard, and make electronic music. Listen to the rock album I wrote, recorded, & mixed with my friends: Hotbed of Descent by The Electric Army.",
+        "In my free time, I play bass, guitar, drums, keyboard, and make electronic music. Listen to the rock album I wrote, recorded, & produced with my friends: Hotbed of Descent by The Electric Army.",
       tags: [],
       status: "head banging",
       actionLabel: "Rock out",
