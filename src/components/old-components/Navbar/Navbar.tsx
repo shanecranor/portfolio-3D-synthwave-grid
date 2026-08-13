@@ -4,7 +4,7 @@ const navbarLinks = {
   Home: "/",
   Code: "/code",
   Music: "/music",
-  Photos: "https://shane.cranor.org/Photos/index.html",
+  Photos: "/photos",
 };
 export default function Navbar() {
   return (

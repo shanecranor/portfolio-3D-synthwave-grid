@@ -29,7 +29,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       id: "projects",
       label: "Projects",
       description:
-      "I work as a fullstack software engineer and spend much of my free time working on cool cross discipline projects.",
+        "I work as a fullstack software engineer and spend much of my free time working on cool cross discipline projects.",
       tags: ["Web", "Open Source", "Electronics", "3D Printing", "Games"],
       status: "Building Stuff",
       actionLabel: "Check it out!",
@@ -51,7 +51,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       tags: ["Nikon Z6", "Darktable", "Super-Multi-Coated TAKUMAR 50mm f/1.4"],
       status: "bogos binted",
       actionLabel: "Photos",
-      href: "https://shane.cranor.org/photos",
+      href: "/photos",
       accent: "#ff86f7",
       accentRgb: "255, 134, 247",
       spherePosition: [-3, -0.75, -4.5],
@@ -60,7 +60,6 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
         revealRotationOffset: [-0.16, -0.62, -0.1],
         scale: 1,
       },
-      external: true,
     },
     music: {
       id: "music",
