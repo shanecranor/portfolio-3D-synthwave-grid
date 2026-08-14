@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { ThreeJsUniverse } from "./ThreeJsUniverse";
+import { LicenseSection } from "./LicenseSection";
 import {
   UNIVERSE_INTRO_SPHERE_POSITION,
   UNIVERSE_SECTIONS,
@@ -10,11 +11,7 @@ import {
 } from "@/data/universeSections";
 import "./page.scss";
 
-const SECTION_ORDER: UniverseSectionId[] = [
-  "projects",
-  "photography",
-  "music",
-];
+const SECTION_ORDER: UniverseSectionId[] = ["projects", "photography", "music"];
 
 const SECTION_NUMBERS: Record<UniverseSectionId, string> = {
   projects: "01",
@@ -84,12 +81,8 @@ export default function UniversePage() {
     useState<UniverseScrollState>(INITIAL_SCROLL_STATE);
   const [actionHoverSectionId, setActionHoverSectionId] =
     useState<UniverseSectionId | null>(null);
-  const {
-    activeSectionId,
-    exploreProgress,
-    revealProgress,
-    spherePosition,
-  } = scrollState;
+  const { activeSectionId, exploreProgress, revealProgress, spherePosition } =
+    scrollState;
 
   useEffect(() => {
     const sections = Array.from(
@@ -159,10 +152,8 @@ export default function UniversePage() {
         1,
       );
       setScrollState({
-        activeSectionId:
-          activeStageId === "intro" ? null : activeStageId,
-        exploreProgress:
-          1 - smootherStep(scrollY / exploreFadeDistance),
+        activeSectionId: activeStageId === "intro" ? null : activeStageId,
+        exploreProgress: 1 - smootherStep(scrollY / exploreFadeDistance),
         revealProgress: nextRevealProgress,
         spherePosition: nextSpherePosition,
       });
@@ -250,13 +241,12 @@ export default function UniversePage() {
           const linkProps = section.external
             ? { target: "_blank", rel: "noreferrer" }
             : {};
-          const actionInteractionProps =
-            {
-              onMouseEnter: () => setActionHoverSectionId(sectionId),
-              onMouseLeave: () => setActionHoverSectionId(null),
-              onFocus: () => setActionHoverSectionId(sectionId),
-              onBlur: () => setActionHoverSectionId(null),
-            };
+          const actionInteractionProps = {
+            onMouseEnter: () => setActionHoverSectionId(sectionId),
+            onMouseLeave: () => setActionHoverSectionId(null),
+            onFocus: () => setActionHoverSectionId(sectionId),
+            onBlur: () => setActionHoverSectionId(null),
+          };
 
           return (
             <section
@@ -311,6 +301,8 @@ export default function UniversePage() {
           );
         })}
       </main>
+
+      <LicenseSection />
     </div>
   );
 }
