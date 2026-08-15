@@ -26,6 +26,7 @@ import { CameraRig, type CameraHoverFocus } from "@/components/3D/CameraRig";
 import { HackerSymbolRain } from "@/components/3D/HackerSymbolRain";
 import { GlowSphere } from "@/components/3D/GlowSphere";
 import { NoisySphere } from "@/components/3D/NoisySphere";
+import { UniversePerformanceProfiler } from "@/components/3D/UniversePerformanceProfiler";
 import {
   UniverseBass,
   UniverseComputer,
@@ -248,9 +249,7 @@ export function ThreeJsUniverse({
     <div
       className={`universe-shell${
         hoverState || actionHoverSectionId ? " is-tuning" : ""
-      }${
-        surgingSectionId ? " is-routing" : ""
-      }`}
+      }${surgingSectionId ? " is-routing" : ""}`}
       style={shellStyle}
     >
       <Canvas
@@ -258,6 +257,7 @@ export function ThreeJsUniverse({
         dpr={[0.5, 2]}
         // gl={{ alpha: false, antialias: true }}
       >
+        <UniversePerformanceProfiler />
         <color attach="background" args={["#020105"]} />
         <CameraRig viewIndex={0} hoverFocus={hoverState?.focus ?? null} />
         <UniverseTitle revealProgress={revealProgress.intro} />
@@ -281,7 +281,7 @@ export function ThreeJsUniverse({
           surgingSectionId={surgingSectionId}
         />
         <group position={spherePosition}>
-        <HackerSymbolRain active={highlightedSectionId === "projects"} />
+          <HackerSymbolRain active={highlightedSectionId === "projects"} />
         </group>
         <UniverseBass
           viewIndex={0}

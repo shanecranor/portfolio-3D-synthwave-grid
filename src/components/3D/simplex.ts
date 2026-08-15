@@ -18,8 +18,11 @@ const p = Array(256)
   .fill(0)
   .map((_, i) => i);
 // Fisher-Yates shuffle with seed
+let randomState = 1337;
 for (let i = 255; i > 0; i--) {
-  const j = Math.floor((((i * 16807) % 2147483647) / 2147483647) * (i + 1));
+  randomState = (randomState * 16807) % 2147483647;
+  const random = (randomState - 1) / 2147483646;
+  const j = Math.floor(random * (i + 1));
   [p[i], p[j]] = [p[j], p[i]];
 }
 const perm = [...p, ...p];

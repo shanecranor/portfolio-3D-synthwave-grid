@@ -234,7 +234,7 @@ export const UniverseTitle = ({
       responsiveTextScale * reveal,
     );
 
-    const t = clock.getElapsedTime();
+    const t = clock.elapsedTime;
     root.rotation.set(
       -easedY * 0.5,
       Math.sin(t) * 0.005 + easedX * 0.08,

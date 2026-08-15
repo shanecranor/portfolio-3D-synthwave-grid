@@ -781,7 +781,7 @@ export function HackerSymbolRain({
 
     const material = rainMaterialRef.current;
     if (material) {
-      material.uniforms.uTime.value = clock.getElapsedTime();
+      material.uniforms.uTime.value = clock.elapsedTime;
       material.uniforms.uActive.value = active ? 1 : 0;
 
       for (const [layerIndex] of config.layers.entries()) {

@@ -204,7 +204,7 @@ export function NoisySphere({
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
-    const time = clock.getElapsedTime();
+    const time = clock.elapsedTime;
     groupRef.current.rotation.x = rotation[0] + rotateAnimation[0] * time;
     groupRef.current.rotation.y = rotation[1] + rotateAnimation[1] * time;
     groupRef.current.rotation.z = rotation[2] + rotateAnimation[2] * time;

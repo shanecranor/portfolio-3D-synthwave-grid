@@ -39,7 +39,9 @@ export function stepDampedSpring(
     const displacementScale = velocity + omega * displacement;
     const nextDisplacement = decay * (displacement + displacementScale * delta);
     const nextVelocity =
-      decay * (velocity - omega * (displacement + displacementScale * delta));
+      decay *
+      (displacementScale -
+        omega * (displacement + displacementScale * delta));
 
     return {
       value: target + nextDisplacement,
