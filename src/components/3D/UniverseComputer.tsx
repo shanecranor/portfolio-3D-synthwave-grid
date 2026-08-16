@@ -24,10 +24,10 @@ type UniverseComputerProps = {
   revealProgress?: number;
   targetSize?: number;
   onHoverStateChange?: (
-      sectionId: UniverseSectionId,
-      isHovered: boolean,
-      focus: CameraHoverFocus,
-    ) => void;
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
   onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
   activeSectionId?: UniverseSectionId | null;
   surgingSectionId?: UniverseSectionId | null;
@@ -38,10 +38,10 @@ type UniverseBassProps = {
   visible?: boolean;
   revealProgress?: number;
   onHoverStateChange?: (
-      sectionId: UniverseSectionId,
-      isHovered: boolean,
-      focus: CameraHoverFocus,
-    ) => void;
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
   onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
   activeSectionId?: UniverseSectionId | null;
   surgingSectionId?: UniverseSectionId | null;
@@ -52,10 +52,10 @@ type UniverseReflexCameraProps = {
   visible?: boolean;
   revealProgress?: number;
   onHoverStateChange?: (
-      sectionId: UniverseSectionId,
-      isHovered: boolean,
-      focus: CameraHoverFocus,
-    ) => void;
+    sectionId: UniverseSectionId,
+    isHovered: boolean,
+    focus: CameraHoverFocus,
+  ) => void;
   onSelect?: (sectionId: UniverseSectionId, focus: CameraHoverFocus) => void;
   activeSectionId?: UniverseSectionId | null;
   surgingSectionId?: UniverseSectionId | null;
