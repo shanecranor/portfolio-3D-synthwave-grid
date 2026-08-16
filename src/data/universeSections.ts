@@ -1,23 +1,32 @@
-export type UniverseSectionId = "photography" | "projects" | "music";
+export type UniverseSectionId = "photography" | "projects" | "music" | "end";
 
-export type UniverseSectionData = {
-  id: UniverseSectionId;
-  label: string;
-  description: string;
-  tags: string[];
-  status: string;
-  actionLabel: string;
-  href: string;
-  accent: string;
-  accentRgb: string;
-  spherePosition: [number, number, number];
-  modelPose: {
-    rotation: [number, number, number];
-    revealRotationOffset: [number, number, number];
-    scale: number;
-  };
-  external?: boolean;
-};
+export type UniverseSectionData =
+  | {
+      type: "full";
+      id: UniverseSectionId;
+      label: string;
+      description: string;
+      tags: string[];
+      status: string;
+      actionLabel: string;
+      href: string;
+      accent: string;
+      accentRgb: string;
+      spherePosition: [number, number, number];
+      modelPose: {
+        rotation: [number, number, number];
+        revealRotationOffset: [number, number, number];
+        scale: number;
+      };
+      external?: boolean;
+    }
+  | {
+      type: "empty";
+      id: UniverseSectionId;
+      accent: string;
+      accentRgb: string;
+      spherePosition: [number, number, number];
+    };
 
 export const UNIVERSE_INTRO_SPHERE_POSITION: [number, number, number] = [
   0, 0, 0,
@@ -26,6 +35,7 @@ export const UNIVERSE_INTRO_SPHERE_POSITION: [number, number, number] = [
 export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
   {
     projects: {
+      type: "full",
       id: "projects",
       label: "Projects",
       description:
@@ -44,6 +54,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       },
     },
     photography: {
+      type: "full",
       id: "photography",
       label: "Photography",
       description:
@@ -62,6 +73,7 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       },
     },
     music: {
+      type: "full",
       id: "music",
       label: "Music",
       description:
@@ -78,5 +90,12 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
         revealRotationOffset: [0, -0.5, 0.18],
         scale: 1,
       },
+    },
+    end: {
+      type: "empty",
+      id: "end",
+      accent: "#444444",
+      accentRgb: "68, 68, 68",
+      spherePosition: [0, 10, -30],
     },
   };

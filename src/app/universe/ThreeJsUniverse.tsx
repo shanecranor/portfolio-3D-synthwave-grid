@@ -39,9 +39,10 @@ import {
 } from "@/data/universeSections";
 
 const NAVIGATION_SURGE_MS = 360;
-const TERRAIN_COLOR = [194, 91, 163];
-const SPHERE_GLOW_COLOR = [55, 35, 83];
-
+// const TERRAIN_COLOR = [194, 91, 163];
+// const SPHERE_GLOW_COLOR = [55, 35, 83];
+const TERRAIN_COLOR = [0.88 * 255, 0.94 * 255, 1.95 * 255];
+const SPHERE_GLOW_COLOR = [0.88 * 255, 0.94 * 255, 1.95 * 255];
 type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
   revealProgress: Record<"intro" | UniverseSectionId, number>;
@@ -217,6 +218,8 @@ export function ThreeJsUniverse({
       }
 
       const section = UNIVERSE_SECTIONS[sectionId];
+      if (section.type !== "full") return;
+
       setHoverState({ sectionId, focus });
       setSurgingSectionId(sectionId);
 

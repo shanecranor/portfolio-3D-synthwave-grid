@@ -383,7 +383,9 @@ function UniverseAnchoredObject({
     const reveal = THREE.MathUtils.clamp(revealProgress, 0, 1);
     anchor.visible = isDefaultView && reveal > 0.002;
     if (!isDefaultView) return;
-    const modelPose = UNIVERSE_SECTIONS[sectionId].modelPose;
+    const section = UNIVERSE_SECTIONS[sectionId];
+    if (section.type !== "full") return;
+    const modelPose = section.modelPose;
     anchor.position.set(
       titleAnchorX + placement.xOffset * horizontalSpreadScale,
       DEFAULT_UNIVERSE_ANCHOR_Y + placement.yOffset - (1 - reveal) * 0.5,

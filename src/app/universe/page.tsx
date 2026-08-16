@@ -11,13 +11,17 @@ import {
 } from "@/data/universeSections";
 import "./page.scss";
 
-const SECTION_ORDER: UniverseSectionId[] = ["projects", "photography", "music"];
-
-const SECTION_NUMBERS: Record<UniverseSectionId, string> = {
-  projects: "01",
-  photography: "02",
-  music: "03",
-};
+const SECTION_ORDER: UniverseSectionId[] = [
+  "projects",
+  "photography",
+  "music",
+  "end",
+];
+const NAV_SECTION_ORDER: Exclude<UniverseSectionId, "end">[] = [
+  "projects",
+  "photography",
+  "music",
+];
 
 const EXPLORE_FADE_VIEWPORT_FRACTION = 0.35;
 
@@ -42,6 +46,7 @@ const INITIAL_SCROLL_STATE: UniverseScrollState = {
     projects: 0,
     photography: 0,
     music: 0,
+    end: 0,
   },
   spherePosition: UNIVERSE_INTRO_SPHERE_POSITION,
 };
@@ -107,6 +112,7 @@ export default function UniversePage() {
         projects: 0,
         photography: 0,
         music: 0,
+        end: 0,
       };
       let activeIndex: number;
       let nextSpherePosition: [number, number, number];
@@ -201,16 +207,23 @@ export default function UniversePage() {
         >
           <span>Home</span>
         </a>
-        {SECTION_ORDER.map((sectionId) => (
-          <a
-            key={sectionId}
-            href={`#${sectionId}`}
-            className={activeSectionId === sectionId ? "is-active" : undefined}
-            aria-label={UNIVERSE_SECTIONS[sectionId].label}
-          >
-            <span>{UNIVERSE_SECTIONS[sectionId].label}</span>
-          </a>
-        ))}
+        {NAV_SECTION_ORDER.map((sectionId) => {
+          const section = UNIVERSE_SECTIONS[sectionId];
+          if (section.type !== "full") return null;
+
+          return (
+            <a
+              key={sectionId}
+              href={`#${sectionId}`}
+              className={
+                activeSectionId === sectionId ? "is-active" : undefined
+              }
+              aria-label={section.label}
+            >
+              <span>{section.label}</span>
+            </a>
+          );
+        })}
       </nav>
 
       <main className="universe-story">
@@ -238,6 +251,19 @@ export default function UniversePage() {
 
         {SECTION_ORDER.map((sectionId, index) => {
           const section = UNIVERSE_SECTIONS[sectionId];
+
+          if (section.type === "empty") {
+            return (
+              <section
+                key={sectionId}
+                id={sectionId}
+                className="universe-stage universe-end-stage"
+                data-universe-stage={sectionId}
+                aria-hidden="true"
+              />
+            );
+          }
+
           const linkProps = section.external
             ? { target: "_blank", rel: "noreferrer" }
             : {};
