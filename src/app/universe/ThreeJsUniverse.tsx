@@ -143,7 +143,19 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
           mipmapBlur
           opacity={0.72}
         />
-        <FilmGrain opacity={0.026} />
+        <FilmGrain
+          opacity={0.06}
+          grainSize={1.5}
+          grainContrast={0.5}
+          secondaryGrainMix={0.62}
+          secondaryGrainScale={0.71}
+          exposureVariationStrength={0.01}
+          exposureVariationScale={[0.2, 0.2]}
+          interferenceBandHeight={6}
+          interferenceThreshold={0.985}
+          interferenceStrength={0.04}
+          maxFps={24}
+        />
         <Scanline density={1} opacity={0.1} scrollSpeed={0} />
         <Vignette
           offset={0.32}
