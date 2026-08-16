@@ -218,11 +218,11 @@ export function NoisySphere({
         // scale={[0.998, 0.998, 0.998]}
         scale={0.999}
       >
-        {/* <meshBasicMaterial color={[0.015, 0.005, 0.01]} /> */}
-        <MeshTransmissionMaterial
+        <meshBasicMaterial color={[0.0, 0.0, 0.0]} />
+        {/* <MeshTransmissionMaterial
           backside
           samples={2}
-          resolution={1024}
+          resolution={64}
           thickness={0.05}
           roughness={0.8}
           iridescence={1}
@@ -232,7 +232,7 @@ export function NoisySphere({
           color={[1, 1, 1]}
           transmission={0.2}
           emissive={[0, 0, 0]}
-        />
+        /> */}
       </mesh>
       {edgeColor && (
         <lineSegments geometry={wireframeGeometry}>

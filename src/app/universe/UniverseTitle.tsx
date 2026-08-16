@@ -1,13 +1,7 @@
 "use client";
 
 import * as THREE from "three";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentRef,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   TextGeometry,
@@ -230,9 +224,7 @@ export const UniverseTitle = ({
       DEFAULT_UNIVERSE_ANCHOR_Y - (1 - reveal) * 0.35,
       DEFAULT_UNIVERSE_ANCHOR_Z,
     );
-    centerRef.current?.scale.setScalar(
-      responsiveTextScale * reveal,
-    );
+    centerRef.current?.scale.setScalar(responsiveTextScale * reveal);
 
     const t = clock.elapsedTime;
     root.rotation.set(
@@ -331,16 +323,16 @@ export const UniverseTitle = ({
           <mesh geometry={textGeometry} renderOrder={1}>
             <MeshTransmissionMaterial
               ref={transmissionMaterialRef}
-              backside
+              // backside
               transparent
-              samples={4}
-              resolution={256}
+              samples={1}
+              resolution={64}
               thickness={0.5}
               roughness={0.2}
               iridescence={50}
               iridescenceIOR={1.4}
               chromaticAberration={1}
-              anisotropy={1}
+              anisotropy={0}
               color={UNIVERSE_TITLE_COLOR}
               transmission={1}
               opacity={0}
@@ -420,9 +412,7 @@ export const UniverseTitle = ({
           ))}
         </group>
         {/* REAR LINES */}
-        <group
-          position={[0, 0, -1 * ((config.bevelThickness ?? 0.05) + 0.01)]}
-        >
+        <group position={[0, 0, -1 * ((config.bevelThickness ?? 0.05) + 0.01)]}>
           {shapes.map((shape, shapeIndex) => (
             <group key={shapeIndex}>
               <AnimatedDashLine
