@@ -42,6 +42,7 @@ type UniverseScrollState = {
   revealProgress: Record<UniverseSceneId, number>;
   spherePosition: [number, number, number];
   sphereHue: number;
+  sphereColorSaturationMultiplier: number;
 };
 
 const INITIAL_SCROLL_STATE: UniverseScrollState = {
@@ -56,6 +57,7 @@ const INITIAL_SCROLL_STATE: UniverseScrollState = {
   },
   spherePosition: UNIVERSE_INTRO_SPHERE_POSITION,
   sphereHue: DEFAULT_SPHERE_HUE,
+  sphereColorSaturationMultiplier: 1,
 };
 
 function clampProgress(value: number) {
@@ -85,6 +87,12 @@ function getSphereHue(sceneId: UniverseSceneId) {
     : DEFAULT_SPHERE_HUE;
 }
 
+function getSphereColorSaturationMultiplier(sceneId: UniverseSceneId) {
+  if (sceneId === "intro") return 1;
+
+  return UNIVERSE_SECTIONS[sceneId].sphereColorSaturationMultiplier;
+}
+
 function interpolateSpherePosition(
   from: [number, number, number],
   to: [number, number, number],
@@ -108,6 +116,7 @@ export default function UniversePage() {
     revealProgress,
     spherePosition,
     sphereHue,
+    sphereColorSaturationMultiplier,
   } = scrollState;
 
   useEffect(() => {
@@ -138,17 +147,22 @@ export default function UniversePage() {
       let activeIndex: number;
       let nextSpherePosition: [number, number, number];
       let nextSphereHue: number;
+      let nextSphereColorSaturationMultiplier: number;
 
       if (scrollY <= pageCenters[0]) {
         activeIndex = 0;
         nextRevealProgress[stageIds[activeIndex]] = 1;
         nextSpherePosition = getSpherePosition(stageIds[activeIndex]);
         nextSphereHue = getSphereHue(stageIds[activeIndex]);
+        nextSphereColorSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[activeIndex]);
       } else if (scrollY >= pageCenters[pageCenters.length - 1]) {
         activeIndex = pageCenters.length - 1;
         nextRevealProgress[stageIds[activeIndex]] = 1;
         nextSpherePosition = getSpherePosition(stageIds[activeIndex]);
         nextSphereHue = getSphereHue(stageIds[activeIndex]);
+        nextSphereColorSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[activeIndex]);
       } else {
         const nextIndex = pageCenters.findIndex((center) => center >= scrollY);
         const previousIndex = nextIndex - 1;
@@ -178,6 +192,15 @@ export default function UniversePage() {
           getSphereHue(stageIds[nextIndex]),
           curvedProgress,
         );
+        const previousSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[previousIndex]);
+        const nextSaturationMultiplier = getSphereColorSaturationMultiplier(
+          stageIds[nextIndex],
+        );
+        nextSphereColorSaturationMultiplier =
+          previousSaturationMultiplier +
+          (nextSaturationMultiplier - previousSaturationMultiplier) *
+            curvedProgress;
         activeIndex = curvedProgress < 0.5 ? previousIndex : nextIndex;
       }
 
@@ -192,6 +215,7 @@ export default function UniversePage() {
         revealProgress: nextRevealProgress,
         spherePosition: nextSpherePosition,
         sphereHue: nextSphereHue,
+        sphereColorSaturationMultiplier: nextSphereColorSaturationMultiplier,
       });
     };
 
@@ -219,6 +243,7 @@ export default function UniversePage() {
           revealProgress={revealProgress}
           spherePosition={spherePosition}
           sphereHue={sphereHue}
+          sphereColorSaturationMultiplier={sphereColorSaturationMultiplier}
           actionHoverSectionId={actionHoverSectionId}
         />
       </div>

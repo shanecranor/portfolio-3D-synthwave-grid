@@ -49,6 +49,7 @@ type ThreeJsUniverseProps = {
   revealProgress: Record<"intro" | UniverseSectionId, number>;
   spherePosition: [number, number, number];
   sphereHue: number;
+  sphereColorSaturationMultiplier: number;
   actionHoverSectionId: UniverseSectionId | null;
 };
 
@@ -160,12 +161,18 @@ export function ThreeJsUniverse({
   revealProgress,
   spherePosition,
   sphereHue,
+  sphereColorSaturationMultiplier,
   actionHoverSectionId,
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
-    () => createHueShiftedColor(DEFAULT_SPHERE_TERRAIN_COLOR, sphereHue),
-    [sphereHue],
+    () =>
+      createHueShiftedColor(
+        DEFAULT_SPHERE_TERRAIN_COLOR,
+        sphereHue,
+        sphereColorSaturationMultiplier,
+      ),
+    [sphereColorSaturationMultiplier, sphereHue],
   );
   const sphereGlowColor = useMemo(
     () => createHueShiftedColor(DEFAULT_SPHERE_GLOW_COLOR, sphereHue),

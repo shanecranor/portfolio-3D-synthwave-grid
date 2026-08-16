@@ -93,9 +93,10 @@ type UniverseAnchoredObjectProps = {
 type WireframeModelConfig = {
   path: string;
   targetSize: number;
-  fillColor?: THREE.ColorRepresentation;
-  wireframeColor?: THREE.ColorRepresentation;
-  wireframeOpacity?: number;
+  fillColor: string;
+  wireframeColor: string;
+  wireframeColorIntensity?: number;
+  wireframeOpacity: number;
   isHighlighted?: boolean;
   isSurging?: boolean;
   hoverWireframeOpacityMultiplier?: number;
@@ -111,15 +112,6 @@ const BASS_MODEL_PATH = "/assets/universe/bass/scene.gltf";
 const REFLEX_CAMERA_MODEL_PATH = "/assets/cam/reflex_camera/scene.gltf";
 
 export const UNIVERSE_COMPUTER_MODEL_COUNT = COMPUTER_MODELS.length;
-
-const BLACK_FILL_COLOR = new THREE.Color(0x000000);
-// const GREEN_WIREFRAME_COLOR = new THREE.Color("#66ff99");
-const GREEN_WIREFRAME_COLOR = new THREE.Color("#73d1ad");
-const BLUE_WIREFRAME_COLOR = new THREE.Color("#3694cb").multiplyScalar(1.35);
-const BASS_FILL_COLOR = new THREE.Color("#040814");
-const CAMERA_FILL_COLOR = new THREE.Color("#050505");
-// const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ba9f79");
-const CAMERA_WIREFRAME_COLOR = new THREE.Color("#ba9379");
 
 const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
@@ -179,9 +171,10 @@ function getHorizontalSpreadScale(width: number, height: number) {
 function WireframeModel({
   path,
   targetSize,
-  fillColor = BLACK_FILL_COLOR,
-  wireframeColor = GREEN_WIREFRAME_COLOR,
-  wireframeOpacity = 0.95,
+  fillColor,
+  wireframeColor,
+  wireframeColorIntensity = 1,
+  wireframeOpacity,
   isHighlighted = false,
   isSurging = false,
   hoverWireframeOpacityMultiplier = 5,
@@ -208,11 +201,13 @@ function WireframeModel({
 
   useEffect(() => {
     const fillMaterial = new THREE.MeshBasicMaterial({
-      color: fillColor,
+      color: new THREE.Color(fillColor),
       side: THREE.DoubleSide,
     });
     const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: wireframeColor,
+      color: new THREE.Color(wireframeColor).multiplyScalar(
+        wireframeColorIntensity,
+      ),
       wireframe: true,
       transparent: true,
       opacity: wireframeOpacity,
@@ -252,7 +247,13 @@ function WireframeModel({
       fillMaterial.dispose();
       wireframeMaterial.dispose();
     };
-  }, [clonedScene, fillColor, wireframeColor, wireframeOpacity]);
+  }, [
+    clonedScene,
+    fillColor,
+    wireframeColor,
+    wireframeColorIntensity,
+    wireframeOpacity,
+  ]);
 
   useFrame((_, delta) => {
     const wireframeMaterial = wireframeMaterialRef.current;
@@ -488,6 +489,9 @@ export function UniverseReflexCamera({
   activeSectionId,
   surgingSectionId,
 }: UniverseReflexCameraProps) {
+  const section = UNIVERSE_SECTIONS.photography;
+  if (section.type !== "full") return null;
+
   return (
     <UniverseAnchoredObject
       sectionId="photography"
@@ -506,9 +510,12 @@ export function UniverseReflexCamera({
         <WireframeModel
           path={REFLEX_CAMERA_MODEL_PATH}
           targetSize={3.7}
-          fillColor={CAMERA_FILL_COLOR}
-          wireframeColor={CAMERA_WIREFRAME_COLOR}
-          wireframeOpacity={0.14}
+          fillColor={section.modelAppearance.fillColor}
+          wireframeColor={section.modelAppearance.wireframeColor}
+          wireframeColorIntensity={
+            section.modelAppearance.wireframeColorIntensity
+          }
+          wireframeOpacity={section.modelAppearance.wireframeOpacity}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
@@ -529,6 +536,8 @@ export function UniverseComputer({
   surgingSectionId,
 }: UniverseComputerProps) {
   const activeModelPath = COMPUTER_MODELS[modelIndex % COMPUTER_MODELS.length];
+  const section = UNIVERSE_SECTIONS.projects;
+  if (section.type !== "full") return null;
 
   return (
     <UniverseAnchoredObject
@@ -548,9 +557,12 @@ export function UniverseComputer({
         <WireframeModel
           path={activeModelPath}
           targetSize={targetSize}
-          fillColor={BLACK_FILL_COLOR}
-          wireframeColor={GREEN_WIREFRAME_COLOR}
-          wireframeOpacity={0.14}
+          fillColor={section.modelAppearance.fillColor}
+          wireframeColor={section.modelAppearance.wireframeColor}
+          wireframeColorIntensity={
+            section.modelAppearance.wireframeColorIntensity
+          }
+          wireframeOpacity={section.modelAppearance.wireframeOpacity}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
@@ -568,6 +580,9 @@ export function UniverseBass({
   activeSectionId,
   surgingSectionId,
 }: UniverseBassProps) {
+  const section = UNIVERSE_SECTIONS.music;
+  if (section.type !== "full") return null;
+
   return (
     <UniverseAnchoredObject
       sectionId="music"
@@ -587,9 +602,12 @@ export function UniverseBass({
         <WireframeModel
           path={BASS_MODEL_PATH}
           targetSize={5.4}
-          fillColor={BASS_FILL_COLOR}
-          wireframeColor={BLUE_WIREFRAME_COLOR}
-          wireframeOpacity={0.14}
+          fillColor={section.modelAppearance.fillColor}
+          wireframeColor={section.modelAppearance.wireframeColor}
+          wireframeColorIntensity={
+            section.modelAppearance.wireframeColorIntensity
+          }
+          wireframeOpacity={section.modelAppearance.wireframeOpacity}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />

@@ -1,5 +1,12 @@
 export type UniverseSectionId = "photography" | "projects" | "music" | "end";
 
+export type UniverseModelAppearance = {
+  fillColor: string;
+  wireframeColor: string;
+  wireframeColorIntensity?: number;
+  wireframeOpacity: number;
+};
+
 export type UniverseSectionData =
   | {
       type: "full";
@@ -13,11 +20,13 @@ export type UniverseSectionData =
       accent: string;
       accentRgb: string;
       spherePosition: [number, number, number];
+      sphereColorSaturationMultiplier: number;
       modelPose: {
         rotation: [number, number, number];
         revealRotationOffset: [number, number, number];
         scale: number;
       };
+      modelAppearance: UniverseModelAppearance;
       external?: boolean;
     }
   | {
@@ -26,6 +35,7 @@ export type UniverseSectionData =
       accent: string;
       accentRgb: string;
       spherePosition: [number, number, number];
+      sphereColorSaturationMultiplier: number;
     };
 
 export const UNIVERSE_INTRO_SPHERE_POSITION: [number, number, number] = [
@@ -47,10 +57,16 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       accent: "#73d1ad",
       accentRgb: "115, 209, 173",
       spherePosition: [0, -0.75, -2],
+      sphereColorSaturationMultiplier: 0.8,
       modelPose: {
         rotation: [0.2, -Math.PI / 2, 0],
         revealRotationOffset: [-0.18, -0.58, 0.08],
         scale: 1,
+      },
+      modelAppearance: {
+        fillColor: "#000000",
+        wireframeColor: "#8cd6b9",
+        wireframeOpacity: 0.24,
       },
     },
     photography: {
@@ -66,10 +82,16 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       accent: "#ff86f7",
       accentRgb: "255, 134, 247",
       spherePosition: [-3, -0.75, -4.5],
+      sphereColorSaturationMultiplier: 0.8,
       modelPose: {
         rotation: [0, -1.1, 0.1],
         revealRotationOffset: [-0.16, -0.62, -0.1],
         scale: 1,
+      },
+      modelAppearance: {
+        fillColor: "#050505",
+        wireframeColor: "#f2aced",
+        wireframeOpacity: 0.3,
       },
     },
     music: {
@@ -85,10 +107,17 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       accent: "#73b4ff",
       accentRgb: "115, 180, 255",
       spherePosition: [0, 0, -10],
+      sphereColorSaturationMultiplier: 1,
       modelPose: {
         rotation: [Math.PI / 2 + 0.6, Math.PI - 0.9, 0],
         revealRotationOffset: [0, -0.5, 0.18],
         scale: 1,
+      },
+      modelAppearance: {
+        fillColor: "#040814",
+        wireframeColor: "#73b4ff",
+        wireframeColorIntensity: 1.35,
+        wireframeOpacity: 0.14,
       },
     },
     end: {
@@ -97,5 +126,6 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       accent: "#444444",
       accentRgb: "68, 68, 68",
       spherePosition: [0, 10, -30],
+      sphereColorSaturationMultiplier: 1,
     },
   };

@@ -25,12 +25,16 @@ export const DEFAULT_SPHERE_HUE = getNormalizedHsl(
   DEFAULT_SPHERE_TERRAIN_COLOR,
 ).hsl.h;
 
-export function createHueShiftedColor(baseColor: THREE.Color, hue: number) {
+export function createHueShiftedColor(
+  baseColor: THREE.Color,
+  hue: number,
+  saturationMultiplier = 1,
+) {
   const { hsl, intensity } = getNormalizedHsl(baseColor);
   const wrappedHue = ((hue % 1) + 1) % 1;
 
   return new THREE.Color()
-    .setHSL(wrappedHue, hsl.s, hsl.l)
+    .setHSL(wrappedHue, hsl.s * saturationMultiplier, hsl.l)
     .multiplyScalar(intensity);
 }
 
