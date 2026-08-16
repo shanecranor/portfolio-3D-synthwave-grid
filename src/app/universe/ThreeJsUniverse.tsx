@@ -14,7 +14,6 @@ import {
   Bloom,
   BrightnessContrast,
   EffectComposer,
-  Noise,
   Scanline,
   Vignette,
 } from "@react-three/postprocessing";
@@ -25,6 +24,7 @@ import * as THREE from "three";
 import { CameraRig, type CameraHoverFocus } from "@/components/3D/CameraRig";
 import { HackerSymbolRain } from "@/components/3D/HackerSymbolRain";
 import { GlowSphere } from "@/components/3D/GlowSphere";
+import { FilmGrain } from "@/components/3D/FilmGrain";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { UniversePerformanceProfiler } from "@/components/3D/UniversePerformanceProfiler";
 import {
@@ -135,7 +135,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
         <RotatingStars />
       </group>
 
-      <EffectComposer>
+      <EffectComposer multisampling={0}>
         <Bloom
           luminanceThreshold={0}
           intensity={0.86}
@@ -143,7 +143,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
           mipmapBlur
           opacity={0.72}
         />
-        <Noise opacity={0.026} blendFunction={BlendFunction.PIN_LIGHT} />
+        <FilmGrain opacity={0.026} />
         <Scanline density={1} opacity={0.1} scrollSpeed={0} />
         <Vignette
           offset={0.32}
@@ -267,7 +267,7 @@ export function ThreeJsUniverse({
       <Canvas
         camera={{ fov: 75, position: [0, 10.3, 0] }}
         dpr={[0.5, 2]}
-        // gl={{ alpha: false, antialias: true }}
+        gl={{ alpha: false, antialias: false }}
       >
         <UniversePerformanceProfiler />
         <color attach="background" args={["#020105"]} />
