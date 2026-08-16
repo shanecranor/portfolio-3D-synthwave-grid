@@ -21,16 +21,16 @@
 
   &__kicker {
     margin: 0 0 1rem;
-    color: #73d1ad;
+    color: #ffffff;
   }
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
     gap: clamp(2rem, 7vw, 6rem);
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.254);
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
   }
 
   &__heading {
@@ -61,13 +61,13 @@
   &__link {
     color: var(--universe-paper);
     text-decoration: underline;
-    text-decoration-color: rgba(115, 209, 173, 0.58);
+    text-decoration-color: rgba(255, 255, 255, 0.58);
     text-underline-offset: 0.2em;
     transition: color 180ms ease, text-decoration-color 180ms ease;
 
     &:hover,
     &:focus-visible {
-      color: #73d1ad;
+      color: #ffffff;
       text-decoration-color: currentColor;
       outline: none;
     }
