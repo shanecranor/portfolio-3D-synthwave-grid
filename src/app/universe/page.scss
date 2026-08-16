@@ -191,6 +191,10 @@ body {
   scroll-margin-top: 0;
 }
 
+.universe-stage.universe-end-stage {
+  min-height: 50svh;
+}
+
 .universe-intro {
   justify-items: center;
   align-items: end;

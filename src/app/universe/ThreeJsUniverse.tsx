@@ -34,19 +34,21 @@ import {
 } from "@/components/3D/UniverseComputer";
 import { UniverseTitle } from "@/app/universe/UniverseTitle";
 import {
+  createHueShiftedColor,
+  DEFAULT_SPHERE_GLOW_COLOR,
+  DEFAULT_SPHERE_TERRAIN_COLOR,
+} from "@/components/3D/universeSphereColor";
+import {
   UNIVERSE_SECTIONS,
   type UniverseSectionId,
 } from "@/data/universeSections";
 
 const NAVIGATION_SURGE_MS = 360;
-// const TERRAIN_COLOR = [194, 91, 163];
-// const SPHERE_GLOW_COLOR = [55, 35, 83];
-const TERRAIN_COLOR = [0.88 * 255, 0.94 * 255, 1.95 * 255];
-const SPHERE_GLOW_COLOR = [0.88 * 255, 0.94 * 255, 1.95 * 255];
 type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
   revealProgress: Record<"intro" | UniverseSectionId, number>;
   spherePosition: [number, number, number];
+  sphereHue: number;
   actionHoverSectionId: UniverseSectionId | null;
 };
 
@@ -157,17 +159,17 @@ export function ThreeJsUniverse({
   activeSectionId,
   revealProgress,
   spherePosition,
+  sphereHue,
   actionHoverSectionId,
 }: ThreeJsUniverseProps) {
   const router = useRouter();
   const edgeColor = useMemo(
-    () =>
-      new THREE.Color(...TERRAIN_COLOR.map((channel) => (channel / 255) * 1.2)),
-    [],
+    () => createHueShiftedColor(DEFAULT_SPHERE_TERRAIN_COLOR, sphereHue),
+    [sphereHue],
   );
   const sphereGlowColor = useMemo(
-    () => new THREE.Color(...SPHERE_GLOW_COLOR.map((channel) => channel / 255)),
-    [],
+    () => createHueShiftedColor(DEFAULT_SPHERE_GLOW_COLOR, sphereHue),
+    [sphereHue],
   );
   const [hoverState, setHoverState] = useState<{
     sectionId: UniverseSectionId;
