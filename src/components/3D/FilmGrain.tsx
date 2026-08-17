@@ -6,16 +6,25 @@ const GRAIN_TEXTURE_SIZE = 512;
 
 const fragmentShader = /* glsl */ `
   uniform sampler2D grainMap;
+#if defined(USE_PRIMARY_GRAIN) || defined(USE_SECONDARY_GRAIN)
   uniform float grainSize;
   uniform float grainContrast;
+#endif
+#ifdef USE_SECONDARY_GRAIN
+  uniform float secondaryGrainSize;
   uniform float secondaryGrainMix;
   uniform float secondaryGrainScale;
+#endif
+#ifdef USE_TERTIARY_GRAIN
   uniform float exposureVariationStrength;
   uniform vec2 exposureVariationScale;
+#endif
+#ifdef USE_INTERFERENCE
   uniform float interferenceBandHeight;
   uniform float interferenceThreshold;
   uniform float interferenceSoftness;
   uniform float interferenceStrength;
+#endif
   uniform float frame;
 
   void mainImage(
@@ -25,8 +34,15 @@ const fragmentShader = /* glsl */ `
   ) {
     // Keep the grain close to a pixel scale while allowing the texture to
     // tile several times across a large display without an obvious pattern.
+#ifdef USE_PRIMARY_GRAIN
     vec2 grainScale = resolution / (float(${GRAIN_TEXTURE_SIZE}) * grainSize);
     vec2 fineUv = uv * grainScale;
+#endif
+#ifdef USE_SECONDARY_GRAIN
+    vec2 secondaryGrainScaleUv =
+      uv * resolution / (float(${GRAIN_TEXTURE_SIZE}) * secondaryGrainSize);
+#endif
+#if defined(USE_PRIMARY_GRAIN) || defined(USE_SECONDARY_GRAIN)
     vec2 fineFrameOffset = vec2(
       fract(frame * 0.754877666),
       fract(frame * 0.569840296)
@@ -35,18 +51,24 @@ const fragmentShader = /* glsl */ `
       fract(frame * 0.438579321),
       fract(frame * 0.913746527)
     );
+#endif
 
+#ifdef USE_PRIMARY_GRAIN
     float fineGrain = texture2D(
       grainMap,
       fract(fineUv + fineFrameOffset)
     ).r;
+#endif
+#ifdef USE_SECONDARY_GRAIN
     float secondaryGrain = texture2D(
       grainMap,
-      fract(fineUv * secondaryGrainScale + secondaryFrameOffset)
+      fract(secondaryGrainScaleUv * secondaryGrainScale + secondaryFrameOffset)
     ).g;
+#endif
 
     // A slower exposure variation makes the grain feel photographic instead
     // of looking like a perfectly uniform digital overlay.
+#ifdef USE_TERTIARY_GRAIN
     float exposureVariation = texture2D(
       grainMap,
       fract(
@@ -54,13 +76,26 @@ const fragmentShader = /* glsl */ `
         vec2(fract(frame * 0.271828182), fract(frame * 0.693147181))
       )
     ).b;
+#endif
 
-    float grain = mix(fineGrain, secondaryGrain, secondaryGrainMix);
+    float grain = 0.5;
+#if defined(USE_PRIMARY_GRAIN) && defined(USE_SECONDARY_GRAIN)
+    grain = mix(fineGrain, secondaryGrain, secondaryGrainMix);
+#elif defined(USE_PRIMARY_GRAIN)
+    grain = fineGrain;
+#elif defined(USE_SECONDARY_GRAIN)
+    grain = secondaryGrain;
+#endif
+#if defined(USE_PRIMARY_GRAIN) || defined(USE_SECONDARY_GRAIN)
     grain = mix(0.5, grain, grainContrast);
+#endif
+#ifdef USE_TERTIARY_GRAIN
     grain += (exposureVariation - 0.5) * exposureVariationStrength;
+#endif
 
     // Rare horizontal disturbances provide a restrained CRT interference
     // layer. Scanline is still responsible for the regular scanline pattern.
+#ifdef USE_INTERFERENCE
     float bandIndex = floor(uv.y * resolution.y / interferenceBandHeight);
     float bandNoise = texture2D(
       grainMap,
@@ -75,6 +110,7 @@ const fragmentShader = /* glsl */ `
       bandNoise
     );
     grain += interference * interferenceStrength;
+#endif
 
     outputColor = vec4(vec3(clamp(grain, 0.0, 1.0)), inputColor.a);
   }
@@ -122,12 +158,16 @@ function createSeededGrainTexture(seed: number) {
 export type FilmGrainOptions = {
   /** Maximum grain updates per second. Use 0 for every rendered frame. */
   maxFps?: number;
+  /** Set to 0 to compile out the primary grain layer. */
   grainSize?: number;
   grainContrast?: number;
+  /** Set to 0 to compile out the secondary grain layer. */
   secondaryGrainMix?: number;
   secondaryGrainScale?: number;
+  /** Set both values to 0 to compile out the tertiary grain layer. */
   exposureVariationStrength?: number;
   exposureVariationScale?: [number, number];
+  /** Set to 0 to compile out the CRT interference layer. */
   interferenceBandHeight?: number;
   interferenceThreshold?: number;
   interferenceSoftness?: number;
@@ -158,13 +198,34 @@ class FilmGrainEffect extends Effect {
   }: FilmGrainOptions & { blendFunction?: BlendFunction } = {}) {
     const grainTexture = createSeededGrainTexture(seed);
     const frameUniform = new THREE.Uniform(0);
+    const secondaryGrainSize = grainSize > 0 ? grainSize : 1.5;
+    const defines = new Map<string, string>();
+
+    if (grainSize > 0 && grainContrast !== 0) {
+      defines.set("USE_PRIMARY_GRAIN", "1");
+    }
+    if (secondaryGrainScale > 0 && grainContrast !== 0) {
+      defines.set("USE_SECONDARY_GRAIN", "1");
+    }
+    if (
+      exposureVariationStrength !== 0 &&
+      exposureVariationScale[0] > 0 &&
+      exposureVariationScale[1] > 0
+    ) {
+      defines.set("USE_TERTIARY_GRAIN", "1");
+    }
+    if (interferenceStrength !== 0 && interferenceBandHeight > 0) {
+      defines.set("USE_INTERFERENCE", "1");
+    }
 
     super("FilmGrainEffect", fragmentShader, {
       blendFunction,
+      defines,
       uniforms: new Map<string, THREE.Uniform>([
         ["grainMap", new THREE.Uniform(grainTexture)],
         ["grainSize", new THREE.Uniform(grainSize)],
         ["grainContrast", new THREE.Uniform(grainContrast)],
+        ["secondaryGrainSize", new THREE.Uniform(secondaryGrainSize)],
         ["secondaryGrainMix", new THREE.Uniform(secondaryGrainMix)],
         ["secondaryGrainScale", new THREE.Uniform(secondaryGrainScale)],
         [
