@@ -46,6 +46,7 @@ import {
 const NAVIGATION_SURGE_MS = 360;
 type ThreeJsUniverseProps = {
   activeSectionId: UniverseSectionId | null;
+  scrollY: number;
   revealProgress: Record<"intro" | UniverseSectionId, number>;
   spherePosition: [number, number, number];
   sphereHue: number;
@@ -170,6 +171,7 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
 
 export function ThreeJsUniverse({
   activeSectionId,
+  scrollY,
   revealProgress,
   spherePosition,
   sphereHue,
@@ -284,7 +286,10 @@ export function ThreeJsUniverse({
         <UniversePerformanceProfiler />
         <color attach="background" args={["#020105"]} />
         <CameraRig viewIndex={0} hoverFocus={hoverState?.focus ?? null} />
-        <UniverseTitle revealProgress={revealProgress.intro} />
+        <UniverseTitle
+          revealProgress={revealProgress.intro}
+          scrollY={scrollY}
+        />
         <UniverseReflexCamera
           viewIndex={0}
           visible={activeSectionId === "photography"}

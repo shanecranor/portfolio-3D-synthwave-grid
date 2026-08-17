@@ -31,6 +31,7 @@ const TITLE_HITBOX_PADDING_Y = 0.8;
 const TITLE_HITBOX_PADDING_Z = 0.8;
 const TITLE_MATERIAL_FADE_SPEED = 10;
 const TITLE_MATERIAL_FADE_EPSILON = 0.01;
+const TITLE_TRANSMISSION_DISABLE_SCROLL_DISTANCE_PX = 400;
 const TITLE_POINTER_SPEED_MIN = 120;
 const TITLE_POINTER_SPEED_MAX = 1600;
 const TITLE_POINTER_STRENGTH_DECAY_SPEED = 2.5;
@@ -107,11 +108,20 @@ const AnimatedDashLine = ({
 
 type UniverseTitleProps = {
   revealProgress: number;
+  scrollY: number;
   textScale?: number;
+};
+
+type TransmissionMaterialInstance = ComponentRef<
+  typeof MeshTransmissionMaterial
+> & {
+  // Drei uses this private uniform for the actual transmission amount.
+  _transmission: number;
 };
 
 export const UniverseTitle = ({
   revealProgress,
+  scrollY,
   textScale = DEFAULT_UNIVERSE_TITLE_SCALE,
 }: UniverseTitleProps) => {
   const browserWidth = useThree((state) => state.size.width);
@@ -241,7 +251,21 @@ export const UniverseTitle = ({
       strengthDecayEase,
     );
 
-    const targetFade = pointerMotionStrengthRef.current;
+    if (
+      pointerMotionStrengthRef.current <= TITLE_MATERIAL_FADE_EPSILON
+    ) {
+      pointerMotionStrengthRef.current = 0;
+    }
+
+    const transmissionEnabled =
+      scrollY < TITLE_TRANSMISSION_DISABLE_SCROLL_DISTANCE_PX;
+    if (!transmissionEnabled) {
+      pointerMotionStrengthRef.current = 0;
+    }
+
+    const targetFade = transmissionEnabled
+      ? pointerMotionStrengthRef.current
+      : 0;
     const fadeEase = 1 - Math.exp(-TITLE_MATERIAL_FADE_SPEED * delta);
     const nextFade = THREE.MathUtils.lerp(
       transmissionFadeRef.current,
@@ -250,14 +274,20 @@ export const UniverseTitle = ({
     );
     transmissionFadeRef.current = nextFade;
 
-    const transmissionMaterial = transmissionMaterialRef.current;
+    const transmissionMaterial = transmissionMaterialRef.current as
+      | TransmissionMaterialInstance
+      | null;
 
     if (transmissionMaterial) {
       transmissionMaterial.opacity = nextFade;
-      transmissionMaterial.transmission = nextFade;
+      transmissionMaterial._transmission = nextFade;
     }
 
-    if (targetFade > 0 && !showTransmissionMaterialRef.current) {
+    if (
+      transmissionEnabled &&
+      targetFade > 0 &&
+      !showTransmissionMaterialRef.current
+    ) {
       showTransmissionMaterialRef.current = true;
       setShowTransmissionMaterial(true);
     }

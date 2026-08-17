@@ -39,6 +39,7 @@ type UniverseSceneId = "intro" | UniverseSectionId;
 type UniverseScrollState = {
   activeSectionId: UniverseSectionId | null;
   exploreProgress: number;
+  scrollY: number;
   revealProgress: Record<UniverseSceneId, number>;
   spherePosition: [number, number, number];
   sphereHue: number;
@@ -48,6 +49,7 @@ type UniverseScrollState = {
 const INITIAL_SCROLL_STATE: UniverseScrollState = {
   activeSectionId: null,
   exploreProgress: 1,
+  scrollY: 0,
   revealProgress: {
     intro: 1,
     projects: 0,
@@ -113,6 +115,7 @@ export default function UniversePage() {
   const {
     activeSectionId,
     exploreProgress,
+    scrollY,
     revealProgress,
     spherePosition,
     sphereHue,
@@ -212,6 +215,7 @@ export default function UniversePage() {
       setScrollState({
         activeSectionId: activeStageId === "intro" ? null : activeStageId,
         exploreProgress: 1 - smootherStep(scrollY / exploreFadeDistance),
+        scrollY,
         revealProgress: nextRevealProgress,
         spherePosition: nextSpherePosition,
         sphereHue: nextSphereHue,
@@ -240,6 +244,7 @@ export default function UniversePage() {
       <div className="three-js-canvas">
         <ThreeJsUniverse
           activeSectionId={activeSectionId}
+          scrollY={scrollY}
           revealProgress={revealProgress}
           spherePosition={spherePosition}
           sphereHue={sphereHue}
