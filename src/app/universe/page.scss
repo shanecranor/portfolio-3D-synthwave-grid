@@ -1,0 +1,535 @@
+@font-face {
+  font-family: "Astro Armada";
+  src: url("/assets/_astroarmada.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  --universe-paper: #f5f0ff;
+  --universe-muted: rgba(232, 225, 246, 0.64);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: #020105;
+}
+
+body {
+  overflow-x: hidden;
+  background: #020105;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.universe-page {
+  position: relative;
+  min-height: 400svh;
+  color: var(--universe-paper);
+  background: #020105;
+  isolation: isolate;
+}
+
+.three-js-canvas {
+  --universe-wireframe-green: #73d1ad;
+  --universe-wireframe-green-rgb: 115, 209, 173;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100vw;
+  height: 100svh;
+  overflow: hidden;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+}
+
+.universe-shell {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  transition: filter 280ms ease;
+}
+
+.universe-shell.is-tuning {
+}
+.universe-shell::after{
+  background: rgba(0, 0, 0, 0);
+  transition: background 280ms ease;
+    content: "";
+
+}
+.universe-shell.is-tuning::after,
+.universe-shell.is-routing::after  {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+  background: rgba(var(--universe-wireframe-green-rgb), 1);
+  mix-blend-mode: color;
+}
+
+.universe-shell.is-routing {
+  filter: saturate(1.15) contrast(1.08) brightness(1.05);
+}
+
+.universe-page::after {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+}
+
+.universe-masthead {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: clamp(1.2rem, 2.5vw, 2rem) clamp(1.25rem, 2vw, 4rem);
+  pointer-events: none;
+  letter-spacing: 0.24em;
+  font-size: 0.68rem;
+  color: var(--universe-muted);
+
+  a {
+    display: grid;
+    width: 4rem;
+    height: 2rem;
+    place-items: center;
+    pointer-events: auto;
+    color: var(--universe-paper);
+
+    font-family: "Astro Armada", sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  a:hover,
+  a:focus-visible {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 0 24px rgba(168, 112, 255, 0.24);
+    outline: none;
+  }
+}
+
+.universe-jump-nav {
+  position: fixed;
+  top: 10%;
+  right: clamp(1.25rem, 4vw, 4rem);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem;
+  transform: translateY(-50%);
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgba(255, 255, 255, 0.44);
+    font-family: var(--font-open-sans), sans-serif;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    transition: color 180ms ease;
+  }
+
+  a::after {
+    width: 0.38rem;
+    height: 0.38rem;
+    content: "";
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  a.is-active,
+  a:hover,
+  a:focus-visible {
+    color: rgba(255, 255, 255, 0.95);
+    outline: none;
+  }
+
+  a.is-active::after {
+    background: currentColor;
+    box-shadow: 0 0 14px currentColor;
+    transform: scale(1.25);
+  }
+}
+
+.universe-story {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.universe-stage {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  align-items: center;
+  padding: clamp(6rem, 10vh, 9rem) clamp(1.25rem, 7vw, 8rem);
+  scroll-margin-top: 0;
+}
+
+.universe-stage.universe-end-stage {
+  min-height: 50svh;
+}
+
+.universe-intro {
+  justify-items: center;
+  align-items: end;
+  padding-bottom: clamp(2.5rem, 8vh, 6rem);
+}
+
+.universe-intro-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.15rem;
+  pointer-events: auto;
+
+  p {
+    margin: 0;
+    color: rgba(245, 240, 255, 0.62);
+    font-family: var(--font-open-sans), sans-serif;
+    font-size: clamp(0.62rem, 1vw, 0.78rem);
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    text-align: center;
+  }
+}
+
+.universe-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: var(--font-open-sans), sans-serif;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.32);
+  transition: color 180ms ease, border-color 180ms ease;
+
+  span {
+    font-size: 1rem;
+  }
+}
+
+.universe-explore.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.universe-explore:hover,
+.universe-explore:focus-visible {
+  color: white;
+  border-color: white;
+  outline: none;
+}
+
+.universe-artifact-stage {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-right: clamp(9rem, 15vw, 13rem);
+}
+
+.universe-artifact-stage.copy-right .universe-artifact-copy {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.universe-artifact-stage.copy-left .universe-artifact-copy {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.universe-artifact-copy {
+  position: relative;
+  padding: clamp(1.3rem, 3vw, 2.35rem);
+  pointer-events: auto;
+  background: linear-gradient(135deg, rgba(6, 3, 12, 0.84), rgba(6, 3, 12, 0.4));
+  border-left: 1px solid rgba(var(--section-accent-rgb), 0.72);
+  box-shadow: -24px 0 70px rgba(var(--section-accent-rgb), 0.07);
+  backdrop-filter: blur(15px);
+}
+
+.universe-section-number {
+  margin: 0 0 1.2rem;
+  color: var(--section-accent);
+  font-family: var(--font-open-sans), sans-serif;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+}
+
+.universe-artifact-copy h2 {
+  margin: 0;
+  color: var(--universe-paper);
+  font-family: "Astro Armada", var(--font-open-sans), sans-serif;
+  font-size: clamp(2.5rem, 4vw, 4.8rem);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  text-shadow: 0 0 26px rgba(var(--section-accent-rgb), 0.28);
+}
+
+.universe-section-description {
+  max-width: 34rem;
+  margin: 1.4rem 0 0;
+  color: rgba(241, 236, 249, 0.72);
+  font-family: var(--font-open-sans), sans-serif;
+  font-size: clamp(0.95rem, 1.35vw, 1.1rem);
+  line-height: 1.7;
+}
+
+.universe-section-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding: 0;
+  margin: 1.45rem 0 0;
+  list-style: none;
+
+  li {
+    color: rgba(255, 255, 255, 0.48);
+    font-family: var(--font-open-sans), sans-serif;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.17em;
+  }
+
+  li::before {
+    margin-right: 0.45rem;
+    color: var(--section-accent);
+    content: "/";
+  }
+}
+
+.universe-section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1.8rem;
+  padding-bottom: 0.45rem;
+  color: var(--universe-paper);
+  font-family: var(--font-open-sans), sans-serif;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-bottom: 1px solid rgba(var(--section-accent-rgb), 0.62);
+  transition: color 180ms ease, border-color 180ms ease, gap 180ms ease;
+}
+
+.universe-section-link:hover,
+.universe-section-link:focus-visible {
+  gap: 1.1rem;
+  color: white;
+  border-color: white;
+  outline: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait),
+  (max-aspect-ratio: 4 / 5) {
+
+
+  .universe-masthead span {
+    display: none;
+  }
+
+  .universe-jump-nav {
+    top: auto;
+    right: 50%;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    flex-direction: row;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(3, 1, 7, 0.72);
+    backdrop-filter: blur(10px);
+    transform: translateX(50%);
+
+    a {
+      gap: 0;
+    }
+
+    a span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+  }
+
+  .universe-stage {
+    align-items: end;
+    padding: 5rem 1rem 6.5rem;
+  }
+
+  .universe-intro {
+    padding-bottom: 7rem;
+  }
+
+  .universe-artifact-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .universe-artifact-stage.copy-right .universe-artifact-copy,
+  .universe-artifact-stage.copy-left .universe-artifact-copy {
+    grid-column: 1;
+  }
+
+  .universe-artifact-copy {
+    width: 100%;
+    padding: 1.25rem;
+    background: linear-gradient(180deg, rgba(4, 2, 8, 0.3), rgba(4, 2, 8, 0.88));
+    backdrop-filter: blur(6px);
+  }
+
+  .universe-artifact-copy h2 {
+    font-size: clamp(2.2rem, 12vw, 4rem);
+  }
+
+  .universe-section-description {
+    max-width: 30rem;
+    font-size: 0.94rem;
+    line-height: 1.55;
+  }
+
+  .universe-section-tags {
+    display: none;
+  }
+
+  .universe-section-link {
+    margin-top: 1.2rem;
+  }
+
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .universe-masthead {
+    padding: 1rem 1.25rem;
+
+    span {
+      display: none;
+    }
+
+    a {
+      width: 2.15rem;
+      height: 2.15rem;
+      font-size: 0.66rem;
+    }
+  }
+
+  .universe-jump-nav {
+    top: auto;
+    right: 50%;
+    bottom: max(0.65rem, env(safe-area-inset-bottom));
+    flex-direction: row;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.58rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(3, 1, 7, 0.72);
+    backdrop-filter: blur(10px);
+    transform: translateX(50%);
+
+    a {
+      gap: 0;
+    }
+
+    a span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+  }
+
+  .universe-stage {
+    min-height: 100svh;
+    padding: 3rem 2rem 3.3rem;
+  }
+
+  .universe-intro {
+    padding-bottom: 3.7rem;
+  }
+
+  .universe-intro-copy {
+    gap: 0.6rem;
+  }
+
+  .universe-artifact-stage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-right: 2rem;
+  }
+
+  .universe-artifact-copy {
+    width: min(100%, 25rem);
+    padding: 1rem 1.15rem;
+    backdrop-filter: blur(7px);
+  }
+
+  .universe-section-number {
+    margin-bottom: 0.7rem;
+    font-size: 0.55rem;
+  }
+
+  .universe-artifact-copy h2 {
+    font-size: clamp(2rem, 3.8vw, 2.65rem);
+  }
+
+  .universe-section-description {
+    margin-top: 0.85rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .universe-section-tags {
+    display: none;
+  }
+
+  .universe-section-link {
+    margin-top: 0.9rem;
+    font-size: 0.62rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

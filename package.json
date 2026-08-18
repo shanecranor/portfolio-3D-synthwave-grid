@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "profile": "next build && python3 -m http.server 3101 --directory out",
     "start": "next start",
     "lint": "eslint ."
   },

@@ -1,5 +1,6 @@
 import "./Featured.scss";
 import syllabuddiesImg from "@/public/assets/project-images/syllabuddies.png";
+import patientPortalImg from "@/public/assets/project-images/patient-portal.png";
 import minesRocksImg from "@/public/assets/project-images/mines-rocks.png";
 import spinWheelImg from "@/public/assets/project-images/spin-wheel.png";
 import { ProjectTags } from "@/components/ProjectTags/ProjectTags";
@@ -8,6 +9,23 @@ export const Featured = () => {
   return (
     // <Section header="Featured Projects" startOpen={true}>
     <div className="featured-container">
+      <article>
+        <img src={patientPortalImg.src} alt="Patient Portal" />
+        <div className="text">
+          <h3>Patient Portal</h3>
+          <p>
+            A patient portal for requesting prescription refills and viewing
+            prescription history, shipments, receipts and more. Used in
+            production by over 40,000 patients
+          </p>
+          <ProjectTags
+            languages={
+              projects.find((proj) => proj.title === "Patient Portal")
+                ?.languages || []
+            }
+          />
+        </div>
+      </article>
       <article>
         <div className="text">
           <h3>Spin the Wheel</h3>
@@ -25,7 +43,14 @@ export const Featured = () => {
         </div>
         {/* <img src={spinWheelImg.src} alt="Spin the Wheel" />
          */}
-        <div className="iframe-container"><iframe src="https://serverless-less.wheel-spin.pages.dev/" width="500px" height="650px" title="Spin the Wheel" /></div>
+        <div className="iframe-container">
+          <iframe
+            src="https://serverless-less.wheel-spin.pages.dev/"
+            width="500px"
+            height="650px"
+            title="Spin the Wheel"
+          />
+        </div>
       </article>
       <article className="flip">
         <div className="text">

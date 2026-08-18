@@ -13,8 +13,9 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 export const metadata: Metadata = {
-  title: "Shane Cranor's Website",
-  description: "I like to build stuff. Here's some of it.",
+  title: "Shane Cranor",
+  description:
+    "Building cool stuff. Software, electronics, photography, music, and more",
 };
 
 export default function RootLayout({
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${inter.variable} ${poppins.variable} ${openSans.variable}`}
     >
       <body className={inter.className}>{children}</body>

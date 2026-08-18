@@ -9,6 +9,7 @@ import RotaryWoofer from "@/public/assets/project-images/rotary-woofer.png";
 import SpinWheel from "@/public/assets/project-images/spin-wheel.png";
 import MinesRocks from "@/public/assets/project-images/mines-rocks.png";
 import TruffleHud from "@/public/assets/project-images/truffle-hud.png";
+import patientPortalImg from "@/public/assets/project-images/patient-portal.png";
 //link icons
 import ExternalLink from "@/public/assets/icons/external-link.svg";
 import Github from "@/public/assets/icons/github.svg";
@@ -28,6 +29,17 @@ export interface Project {
 }
 
 export const projects: Project[] = [
+  {
+    eventName: "Current Employer",
+    year: 2025,
+    title: "Patient Portal",
+    img: patientPortalImg.src,
+    tags: ["Web Stack", "Frontend", "Backend"],
+    summary:
+      "A patient portal for requesting prescription refills and viewing prescription history, shipments, receipts and more.",
+    description: "",
+    languages: ["TypeScript", "VueJS", "MySQL"],
+  },
   {
     eventName: "Mines ACM",
     year: 2024,
@@ -358,9 +370,9 @@ export const tags = Array.from(new Set(projects.map((p) => p.tags).flat()));
 tags.unshift("All");
 export function getProjectsByLanguages(
   projects: Project[],
-  languages: string[]
+  languages: string[],
 ) {
   return projects.filter((proj: Project) =>
-    proj.languages.some((l) => languages.includes(l))
+    proj.languages.some((l) => languages.includes(l)),
   );
 }

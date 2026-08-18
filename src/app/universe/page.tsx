@@ -1,0 +1,395 @@
+"use client";
+
+import { useEffect, useState, type CSSProperties } from "react";
+import Link from "next/link";
+import { ThreeJsUniverse } from "./ThreeJsUniverse";
+import { LicenseSection } from "./LicenseSection";
+import {
+  DEFAULT_SPHERE_HUE,
+  getAccentHue,
+  interpolateHue,
+} from "@/components/3D/universeSphereColor";
+import {
+  UNIVERSE_INTRO_SPHERE_POSITION,
+  UNIVERSE_SECTIONS,
+  type UniverseSectionId,
+} from "@/data/universeSections";
+import "./page.scss";
+
+const SECTION_ORDER: UniverseSectionId[] = [
+  "projects",
+  "photography",
+  "music",
+  "end",
+];
+const NAV_SECTION_ORDER: Exclude<UniverseSectionId, "end">[] = [
+  "projects",
+  "photography",
+  "music",
+];
+
+const EXPLORE_FADE_VIEWPORT_FRACTION = 0.35;
+
+// 1 preserves the original crossfade. Higher values shrink both models more
+// around the midpoint, reducing how much they visually overlap.
+const MAIN_TRANSITION_CURVE_EXPONENT = 2;
+
+type UniverseSceneId = "intro" | UniverseSectionId;
+
+type UniverseScrollState = {
+  activeSectionId: UniverseSectionId | null;
+  exploreProgress: number;
+  scrollY: number;
+  revealProgress: Record<UniverseSceneId, number>;
+  spherePosition: [number, number, number];
+  sphereHue: number;
+  sphereColorSaturationMultiplier: number;
+};
+
+const INITIAL_SCROLL_STATE: UniverseScrollState = {
+  activeSectionId: null,
+  exploreProgress: 1,
+  scrollY: 0,
+  revealProgress: {
+    intro: 1,
+    projects: 0,
+    photography: 0,
+    music: 0,
+    end: 0,
+  },
+  spherePosition: UNIVERSE_INTRO_SPHERE_POSITION,
+  sphereHue: DEFAULT_SPHERE_HUE,
+  sphereColorSaturationMultiplier: 1,
+};
+
+function clampProgress(value: number) {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function smootherStep(progress: number) {
+  const t = clampProgress(progress);
+
+  // Zero velocity and acceleration at each page center keeps the object nearly
+  // still there, while the pose continues changing everywhere in between.
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function getSpherePosition(sceneId: UniverseSceneId) {
+  return sceneId === "intro"
+    ? UNIVERSE_INTRO_SPHERE_POSITION
+    : UNIVERSE_SECTIONS[sceneId].spherePosition;
+}
+
+function getSphereHue(sceneId: UniverseSceneId) {
+  if (sceneId === "intro" || sceneId === "end") return DEFAULT_SPHERE_HUE;
+
+  const section = UNIVERSE_SECTIONS[sceneId];
+  return section.type === "full"
+    ? getAccentHue(section.accent)
+    : DEFAULT_SPHERE_HUE;
+}
+
+function getSphereColorSaturationMultiplier(sceneId: UniverseSceneId) {
+  if (sceneId === "intro") return 1;
+
+  return UNIVERSE_SECTIONS[sceneId].sphereColorSaturationMultiplier;
+}
+
+function interpolateSpherePosition(
+  from: [number, number, number],
+  to: [number, number, number],
+  progress: number,
+): [number, number, number] {
+  return [
+    from[0] + (to[0] - from[0]) * progress,
+    from[1] + (to[1] - from[1]) * progress,
+    from[2] + (to[2] - from[2]) * progress,
+  ];
+}
+
+export default function UniversePage() {
+  const [scrollState, setScrollState] =
+    useState<UniverseScrollState>(INITIAL_SCROLL_STATE);
+  const [actionHoverSectionId, setActionHoverSectionId] =
+    useState<UniverseSectionId | null>(null);
+  const {
+    activeSectionId,
+    exploreProgress,
+    scrollY,
+    revealProgress,
+    spherePosition,
+    sphereHue,
+    sphereColorSaturationMultiplier,
+  } = scrollState;
+
+  useEffect(() => {
+    const sections = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-universe-stage]"),
+    );
+    let frameId: number | undefined;
+
+    const updateActiveSection = () => {
+      frameId = undefined;
+      const scrollY = window.scrollY;
+      const viewportCenter = window.innerHeight / 2;
+      const stageIds = sections.map(
+        (section) => section.dataset.universeStage as UniverseSceneId,
+      );
+      const pageCenters = sections.map((section) => {
+        const bounds = section.getBoundingClientRect();
+
+        return bounds.top + scrollY + bounds.height / 2 - viewportCenter;
+      });
+      const nextRevealProgress: Record<UniverseSceneId, number> = {
+        intro: 0,
+        projects: 0,
+        photography: 0,
+        music: 0,
+        end: 0,
+      };
+      let activeIndex: number;
+      let nextSpherePosition: [number, number, number];
+      let nextSphereHue: number;
+      let nextSphereColorSaturationMultiplier: number;
+
+      if (scrollY <= pageCenters[0]) {
+        activeIndex = 0;
+        nextRevealProgress[stageIds[activeIndex]] = 1;
+        nextSpherePosition = getSpherePosition(stageIds[activeIndex]);
+        nextSphereHue = getSphereHue(stageIds[activeIndex]);
+        nextSphereColorSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[activeIndex]);
+      } else if (scrollY >= pageCenters[pageCenters.length - 1]) {
+        activeIndex = pageCenters.length - 1;
+        nextRevealProgress[stageIds[activeIndex]] = 1;
+        nextSpherePosition = getSpherePosition(stageIds[activeIndex]);
+        nextSphereHue = getSphereHue(stageIds[activeIndex]);
+        nextSphereColorSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[activeIndex]);
+      } else {
+        const nextIndex = pageCenters.findIndex((center) => center >= scrollY);
+        const previousIndex = nextIndex - 1;
+        const segmentLength = Math.max(
+          pageCenters[nextIndex] - pageCenters[previousIndex],
+          1,
+        );
+        const linearProgress =
+          (scrollY - pageCenters[previousIndex]) / segmentLength;
+        const curvedProgress = smootherStep(linearProgress);
+
+        nextRevealProgress[stageIds[previousIndex]] = Math.pow(
+          1 - curvedProgress,
+          MAIN_TRANSITION_CURVE_EXPONENT,
+        );
+        nextRevealProgress[stageIds[nextIndex]] = Math.pow(
+          curvedProgress,
+          MAIN_TRANSITION_CURVE_EXPONENT,
+        );
+        nextSpherePosition = interpolateSpherePosition(
+          getSpherePosition(stageIds[previousIndex]),
+          getSpherePosition(stageIds[nextIndex]),
+          curvedProgress,
+        );
+        nextSphereHue = interpolateHue(
+          getSphereHue(stageIds[previousIndex]),
+          getSphereHue(stageIds[nextIndex]),
+          curvedProgress,
+        );
+        const previousSaturationMultiplier =
+          getSphereColorSaturationMultiplier(stageIds[previousIndex]);
+        const nextSaturationMultiplier = getSphereColorSaturationMultiplier(
+          stageIds[nextIndex],
+        );
+        nextSphereColorSaturationMultiplier =
+          previousSaturationMultiplier +
+          (nextSaturationMultiplier - previousSaturationMultiplier) *
+            curvedProgress;
+        activeIndex = curvedProgress < 0.5 ? previousIndex : nextIndex;
+      }
+
+      const activeStageId = stageIds[activeIndex];
+      const exploreFadeDistance = Math.max(
+        window.innerHeight * EXPLORE_FADE_VIEWPORT_FRACTION,
+        1,
+      );
+      setScrollState({
+        activeSectionId: activeStageId === "intro" ? null : activeStageId,
+        exploreProgress: 1 - smootherStep(scrollY / exploreFadeDistance),
+        scrollY,
+        revealProgress: nextRevealProgress,
+        spherePosition: nextSpherePosition,
+        sphereHue: nextSphereHue,
+        sphereColorSaturationMultiplier: nextSphereColorSaturationMultiplier,
+      });
+    };
+
+    const scheduleUpdate = () => {
+      if (frameId !== undefined) return;
+      frameId = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      if (frameId !== undefined) window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  return (
+    <div className="universe-page">
+      <div className="three-js-canvas">
+        <ThreeJsUniverse
+          activeSectionId={activeSectionId}
+          scrollY={scrollY}
+          revealProgress={revealProgress}
+          spherePosition={spherePosition}
+          sphereHue={sphereHue}
+          sphereColorSaturationMultiplier={sphereColorSaturationMultiplier}
+          actionHoverSectionId={actionHoverSectionId}
+        />
+      </div>
+
+      <header className="universe-masthead">
+        <a href="#intro" aria-label="Back to the beginning">
+          SZC
+        </a>
+        {/* <span>Selected works</span> */}
+      </header>
+
+      <nav className="universe-jump-nav" aria-label="Universe sections">
+        <a
+          href="#intro"
+          className={activeSectionId === null ? "is-active" : undefined}
+          aria-label="Introduction"
+        >
+          <span>Home</span>
+        </a>
+        {NAV_SECTION_ORDER.map((sectionId) => {
+          const section = UNIVERSE_SECTIONS[sectionId];
+          if (section.type !== "full") return null;
+
+          return (
+            <a
+              key={sectionId}
+              href={`#${sectionId}`}
+              className={
+                activeSectionId === sectionId ? "is-active" : undefined
+              }
+              aria-label={section.label}
+            >
+              <span>{section.label}</span>
+            </a>
+          );
+        })}
+      </nav>
+
+      <main className="universe-story">
+        <section
+          id="intro"
+          className="universe-stage universe-intro"
+          data-universe-stage="intro"
+        >
+          <h1 className="sr-only">Shane Cranor</h1>
+          <div className="universe-intro-copy">
+            <a
+              className={`universe-explore${
+                exploreProgress <= 0 ? " is-hidden" : ""
+              }`}
+              href="#projects"
+              style={{ opacity: exploreProgress }}
+              aria-hidden={exploreProgress <= 0}
+              tabIndex={exploreProgress <= 0 ? -1 : undefined}
+            >
+              Explore
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+        </section>
+
+        {SECTION_ORDER.map((sectionId, index) => {
+          const section = UNIVERSE_SECTIONS[sectionId];
+
+          if (section.type === "empty") {
+            return (
+              <section
+                key={sectionId}
+                id={sectionId}
+                className="universe-stage universe-end-stage"
+                data-universe-stage={sectionId}
+                aria-hidden="true"
+              />
+            );
+          }
+
+          const linkProps = section.external
+            ? { target: "_blank", rel: "noreferrer" }
+            : {};
+          const actionInteractionProps = {
+            onMouseEnter: () => setActionHoverSectionId(sectionId),
+            onMouseLeave: () => setActionHoverSectionId(null),
+            onFocus: () => setActionHoverSectionId(sectionId),
+            onBlur: () => setActionHoverSectionId(null),
+          };
+
+          return (
+            <section
+              key={sectionId}
+              id={sectionId}
+              className={`universe-stage universe-artifact-stage ${
+                index % 2 === 0 ? "copy-right" : "copy-left"
+              }`}
+              data-universe-stage={sectionId}
+              style={
+                {
+                  "--section-accent": section.accent,
+                  "--section-accent-rgb": section.accentRgb,
+                } as CSSProperties
+              }
+            >
+              <article className="universe-artifact-copy">
+                {/* <p className="universe-section-number">
+                  {SECTION_NUMBERS[sectionId]} / {section.status}
+                </p> */}
+                <h2>{section.label}</h2>
+                <p className="universe-section-description">
+                  {section.description}
+                </p>
+                <ul className="universe-section-tags" aria-label="Highlights">
+                  {section.tags.map((tag) => (
+                    <li key={tag}>{tag}</li>
+                  ))}
+                </ul>
+                {section.external ? (
+                  <a
+                    className="universe-section-link"
+                    href={section.href}
+                    {...linkProps}
+                    {...actionInteractionProps}
+                  >
+                    {section.actionLabel}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                ) : (
+                  <Link
+                    className="universe-section-link"
+                    href={section.href}
+                    {...actionInteractionProps}
+                  >
+                    {section.actionLabel}
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                )}
+              </article>
+            </section>
+          );
+        })}
+      </main>
+
+      <LicenseSection />
+    </div>
+  );
+}
