@@ -105,9 +105,9 @@ export const UNIVERSE_SECTIONS: Record<UniverseSectionId, UniverseSectionData> =
       actionLabel: "Rock out",
       href: "/music",
       accent: "#73b4ff",
-      accentRgb: "115, 180, 255",
+      accentRgb: "115, 160, 255",
       spherePosition: [0, 0, -10],
-      sphereColorSaturationMultiplier: 1,
+      sphereColorSaturationMultiplier: 0.8,
       modelPose: {
         rotation: [Math.PI / 2 + 0.6, Math.PI - 0.9, 0],
         revealRotationOffset: [0, -0.5, 0.18],

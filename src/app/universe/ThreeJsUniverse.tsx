@@ -23,7 +23,6 @@ import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { CameraRig, type CameraHoverFocus } from "@/components/3D/CameraRig";
 import { HackerSymbolRain } from "@/components/3D/HackerSymbolRain";
-import { GlowSphere } from "@/components/3D/GlowSphere";
 import { FilmGrain } from "@/components/3D/FilmGrain";
 import { NoisySphere } from "@/components/3D/NoisySphere";
 import { UniversePerformanceProfiler } from "@/components/3D/UniversePerformanceProfiler";
@@ -103,6 +102,10 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
             noiseAmount={0.24}
             edgeColor={edgeColor}
             edgeOpacity={0.62}
+            surfaceGlowColor={glowColor}
+            surfaceGlowIntensity={0.02}
+            surfaceGlowWidth={1}
+            surfaceGlowCurve={10}
             flatCenter
             poleNoiseFloor={0}
             equatorPower={0.85}
@@ -118,6 +121,10 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
             noiseAmount={0.24}
             edgeColor={edgeColor}
             edgeOpacity={0.5}
+            surfaceGlowColor={edgeColor}
+            surfaceGlowIntensity={0.02}
+            surfaceGlowWidth={1}
+            surfaceGlowCurve={10}
             flatCenter
             poleNoiseFloor={0}
             equatorPower={0.85}
@@ -127,12 +134,6 @@ const UniverseBackdrop = memo(function UniverseBackdrop({
             rotateAnimation={[0.006, 0, 0]}
           />
         </Detailed>
-        <GlowSphere
-          radius={10}
-          glowColor={glowColor}
-          glowOpacity={0.08}
-          glowSpread={2.8}
-        />
         <RotatingStars />
       </group>
 
