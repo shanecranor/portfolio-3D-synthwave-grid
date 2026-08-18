@@ -97,6 +97,7 @@ type WireframeModelConfig = {
   wireframeColor: string;
   wireframeColorIntensity?: number;
   wireframeOpacity: number;
+  surfaceGlowStrength?: number;
   isHighlighted?: boolean;
   isSurging?: boolean;
   hoverWireframeOpacityMultiplier?: number;
@@ -117,6 +118,61 @@ const HOVER_SPRING_FREQUENCY = 12;
 const HOVER_SPRING_DAMPING = 0.5;
 const DEFAULT_LAYOUT_ASPECT = 16 / 9;
 const PORTRAIT_STACK_ASPECT = 0.95;
+
+const MODEL_EDGE_VERTEX_SHADER = `
+attribute vec3 aBarycentric;
+varying vec3 vBarycentric;
+
+void main() {
+  vBarycentric = aBarycentric;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const MODEL_EDGE_FRAGMENT_SHADER = `
+uniform vec3 uBaseColor;
+uniform vec3 uGlowColor;
+uniform float uEdgeWidth;
+uniform float uCurve;
+uniform float uStrength;
+varying vec3 vBarycentric;
+
+void main() {
+  float edgeDistance = min(
+    vBarycentric.x,
+    min(vBarycentric.y, vBarycentric.z)
+  );
+  float normalizedDistance = clamp(
+    edgeDistance / max(uEdgeWidth, 0.0001),
+    0.0,
+    1.0
+  );
+  float edgeGlow = pow(
+    max(1.0 - normalizedDistance, 0.0),
+    max(uCurve, 0.0001)
+  );
+
+  gl_FragColor = vec4(
+    uBaseColor + uGlowColor * edgeGlow * uStrength,
+    1.0
+  );
+}
+`;
+
+function createBarycentricGeometry(source: THREE.BufferGeometry) {
+  const geometry = source.index ? source.toNonIndexed() : source.clone();
+  const barycentric = new Float32Array(geometry.attributes.position.count * 3);
+
+  for (let index = 0; index < geometry.attributes.position.count; index++) {
+    barycentric[index * 3 + (index % 3)] = 1;
+  }
+
+  geometry.setAttribute(
+    "aBarycentric",
+    new THREE.Float32BufferAttribute(barycentric, 3),
+  );
+  return geometry;
+}
 
 // These scale the model and its hitbox together. The values are applied before
 // the responsive, reveal, hover, and click-surge scale animations.
@@ -175,6 +231,7 @@ function WireframeModel({
   wireframeColor,
   wireframeColorIntensity = 1,
   wireframeOpacity,
+  surfaceGlowStrength = 0.1,
   isHighlighted = false,
   isSurging = false,
   hoverWireframeOpacityMultiplier = 5,
@@ -200,9 +257,22 @@ function WireframeModel({
   }, [clonedScene, targetSize]);
 
   useEffect(() => {
-    const fillMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(fillColor),
+    const fillMaterial = new THREE.ShaderMaterial({
+      vertexShader: MODEL_EDGE_VERTEX_SHADER,
+      fragmentShader: MODEL_EDGE_FRAGMENT_SHADER,
+      uniforms: {
+        uBaseColor: { value: new THREE.Color(fillColor) },
+        uGlowColor: {
+          value: new THREE.Color(wireframeColor).multiplyScalar(
+            wireframeColorIntensity,
+          ),
+        },
+        uEdgeWidth: { value: 0.3 },
+        uCurve: { value: 30 },
+        uStrength: { value: surfaceGlowStrength },
+      },
       side: THREE.DoubleSide,
+      toneMapped: false,
     });
     const wireframeMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(wireframeColor).multiplyScalar(
@@ -218,22 +288,31 @@ function WireframeModel({
       polygonOffsetUnits: -1,
     });
     wireframeMaterialRef.current = wireframeMaterial;
-    const originalMeshes: THREE.Mesh[] = [];
+    const originalMeshes: Array<{
+      mesh: THREE.Mesh;
+      geometry: THREE.BufferGeometry;
+      material: THREE.Material | THREE.Material[];
+    }> = [];
     const wireframeOverlays: THREE.Mesh[] = [];
+    const edgeGeometries: THREE.BufferGeometry[] = [];
 
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        originalMeshes.push(child);
+        originalMeshes.push({
+          mesh: child,
+          geometry: child.geometry,
+          material: child.material,
+        });
       }
     });
 
-    for (const child of originalMeshes) {
+    for (const { mesh: child, geometry: originalGeometry } of originalMeshes) {
+      const edgeGeometry = createBarycentricGeometry(originalGeometry);
+      edgeGeometries.push(edgeGeometry);
+      child.geometry = edgeGeometry;
       child.material = fillMaterial;
 
-      const wireframeOverlay = new THREE.Mesh(
-        child.geometry,
-        wireframeMaterial,
-      );
+      const wireframeOverlay = new THREE.Mesh(edgeGeometry, wireframeMaterial);
       wireframeOverlay.renderOrder = 1;
       child.add(wireframeOverlay);
       wireframeOverlays.push(wireframeOverlay);
@@ -242,6 +321,17 @@ function WireframeModel({
     return () => {
       for (const overlay of wireframeOverlays) {
         overlay.removeFromParent();
+      }
+      for (const {
+        mesh,
+        geometry: originalGeometry,
+        material: originalMaterial,
+      } of originalMeshes) {
+        mesh.geometry = originalGeometry;
+        mesh.material = originalMaterial;
+      }
+      for (const geometry of edgeGeometries) {
+        geometry.dispose();
       }
       wireframeMaterialRef.current = null;
       fillMaterial.dispose();
@@ -253,6 +343,7 @@ function WireframeModel({
     wireframeColor,
     wireframeColorIntensity,
     wireframeOpacity,
+    surfaceGlowStrength,
   ]);
 
   useFrame((_, delta) => {
@@ -563,6 +654,7 @@ export function UniverseComputer({
             section.modelAppearance.wireframeColorIntensity
           }
           wireframeOpacity={section.modelAppearance.wireframeOpacity}
+          surfaceGlowStrength={0.2}
           isHighlighted={isHighlighted}
           isSurging={isItemSurging}
         />
